@@ -606,7 +606,9 @@ static void drawMessages(bool composeMode) {
 
     int composeH = composeMode ? 24 : 0;
     int areaTop = BAR_H + 3;
-    int areaBot = SCREEN_H - HINT_H - composeH;
+    // 4 px de respiration avant le chrome du bas : la dernière bulle ne
+    // touche jamais le panneau, et son ombre (2 px) vit dans cet espace.
+    int areaBot = SCREEN_H - HINT_H - composeH - 4;
     int areaH = areaBot - areaTop;
 
     int total = 0;
