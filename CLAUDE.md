@@ -65,6 +65,10 @@ Cardputer / `http://cardputer.local` en usage normal.
 pio run -e cardputer-adv              # compiler
 pio run -e cardputer-adv -t upload    # flasher (USB-C)
 pio device monitor                    # console série (115200)
+pio test -e test-native               # tests natifs (logique pure)
+pio run -e sim                        # simulateur SDL macOS
+.pio/build/sim/program                #   fenêtre interactive ×3
+.pio/build/sim/program --screens captures/en   # captures BMP sans fenêtre
 ```
 
 ## Structure
@@ -73,8 +77,12 @@ pio device monitor                    # console série (115200)
 include/   app_config.h, bb_client.h, config_portal.h, certs.h, i18n.h,
            bb_streams.h, bb_emoji.h, bb_scroll.h, bb_tapback.h (logique pure,
            testée en natif : pio test -e test-native)
-src/       main.cpp (UI + machine à états), bb_client.cpp (REST),
-           config_portal.cpp (portail web), app_config.cpp (NVS)
+src/       main.cpp (état, réseau, NVS, clavier), bb_client.cpp (REST),
+           config_portal.cpp (portail web), app_config.cpp (NVS),
+           sound.cpp (synthèse), main_sim.cpp (simulateur SDL + démo)
+src/ui/    rendu PORTABLE appareil/simulateur : display.h (M5GFX ↔
+           LovyanGFX), theme.h (palette+géométrie), model.h (UiModel),
+           render.cpp — ne touche jamais réseau/NVS/matériel
 docs/      00 analyse, 01 décisions, 02 architecture, 03 roadmap
 ```
 

@@ -14,6 +14,8 @@
 #include "bb_emoji.h"
 #include "bb_scroll.h"
 #include "i18n.h"
+#include "ui/render.h"
+#include "ui/theme.h"
 #include "config_portal.h"
 #include "sound.h"
 
@@ -23,26 +25,15 @@ static const char* APP_VERSION = "0.3.0";
 // État global
 // ---------------------------------------------------------------------------
 
-enum Screen { SCR_SETUP, SCR_CHATS, SCR_MESSAGES, SCR_COMPOSE, SCR_INFO, SCR_SETTINGS };
 
 // Construit sans parent et créé tardivement dans setup() : objet global,
 // M5Cardputer n'est pas encore initialisé ici (même précaution que Daoa Mini).
 static M5Canvas sCanvas;
 static bool sSpriteOk = false;
 static BBClient sClient;
-static Screen sScreen = SCR_CHATS;
 
-static std::vector<BBChat> sChats;
-static std::vector<BBMsg> sMsgs;
-static std::map<String, int64_t> sSeen;  // clé de fusion -> date du dernier msg vu
 
-static int sChatSel = 0;        // index sélectionné dans la liste
-static int sChatTop = 0;        // premier index affiché
-static int sMsgScroll = 0;      // index d'arrêt de défilement (0 = bas, dernier message)
-static int sMsgStops = 1;       // nombre d'arrêts, recalculé à chaque rendu
 static String sCurChatGuid;
-static String sCurChatKey;
-static String sCurChatTitle;
 static uint32_t sChatEpoch = 0;  // incrémenté à chaque ouverture : périme les réponses en vol
 
 // Marqueur de rattrapage : date serveur max observée dans les réponses —
@@ -55,15 +46,8 @@ static int64_t sPollBefore = 0;     // curseur de reprise (rattrapage inachevé)
 static int64_t sPendingNewest = 0;  // date la plus récente vue pendant ce rattrapage
 static uint8_t sPollRounds = 0;     // tours de rattrapage consécutifs incomplets
 static int32_t sDecayDay = 0;    // jour (marqueur/86400000) de la dernière décroissance
-static bool sSynced = false;     // un poll a abouti depuis le démarrage
-static volatile bool sCalibrating = false;  // écran plein de calibration
 static volatile bool sCalibPending = false; // calibration en file OU en cours
-static volatile int sCalibPage = 0;
-static volatile int sCalibTotal = 0;
 static bool sListChanged = false;  // liste à repersister (entrée ou aperçu modifié)
-static String sCompose;
-static String sStatus;          // état de la LISTE (poll, calibration, ping)
-static String sStatusView;      // état de la CONVERSATION ouverte ("Envoi…", erreurs)
 // Deux variables séparées : sans ça, un poll global qui réussit effaçait
 // l'erreur de la conversation ouverte et laissait un faux « Conversation
 // vide » (revue du 2026-08-15).
@@ -124,641 +108,10 @@ struct DataLock {  // verrou RAII sur les données partagées UI <-> réseau
     ~DataLock() { xSemaphoreGive(sDataMux); }
 };
 
-// Palette « encre et bulle » — voir le design system (design/foundations).
-// Valeurs RGB565 : ce sont exactement les teintes que l'écran affiche.
-static const uint16_t C_INK900   = 0x0883;  // fond
-static const uint16_t C_INK800   = 0x10C5;  // barres
-static const uint16_t C_INK700   = 0x1928;  // bulle reçue, surface
-static const uint16_t C_INK600   = 0x21A9;  // ligne sélectionnée
-static const uint16_t C_SLATE300 = 0x8D17;  // texte secondaire
-static const uint16_t C_SLATE200 = 0xBE3B;  // aperçu
-static const uint16_t C_WHITE    = 0xFFFF;
-static const uint16_t C_BLUE500  = 0x2BFD;  // bulle envoyée
-static const uint16_t C_BLUE400  = 0x4D1F;  // accent
-static const uint16_t C_GREEN400 = 0x3631;
-static const uint16_t C_AMBER400 = 0xFD84;  // pastille non lu
-static const uint16_t C_RED400   = 0xFACB;  // erreur
-
-static const int SCREEN_W = 240;
-static const int SCREEN_H = 135;
-static const int BAR_H = 16;    // barre supérieure
-static const int HINT_H = 13;   // barre d'aide
-
-// Géométrie des bulles (design/foundations/geometry)
-static const int BUB_MAXW  = 176;  // 73 % de l'écran
-static const int BUB_PADX  = 4;
-static const int BUB_PADY  = 3;
-static const int BUB_R     = 5;
-static const int BUB_TAIL  = 3;
-static const int LINE_H    = 13;
-static const int GAP_SAME  = 3;   // même auteur
-static const int GAP_TURN  = 7;   // changement d'auteur
-static const int TAP_PAD   = 10;  // réserve au-dessus d'une bulle à réactions
-static const int TAP_H     = 16;  // hauteur du badge (chevauche la bulle de 6 px)
-static const int EDGE      = 6;   // marge d'écran
-
-// ---------------------------------------------------------------------------
-// Aides rendu — « texte riche » : la police efont pour le texte, les glyphes
-// pixel de emoji_art.h pour les émojis (12 px dans la ligne de 13).
-// ---------------------------------------------------------------------------
-
-static const int EMOJI_ADV = 13;  // 12 px de glyphe + 1 d'espacement
-
-static int richWidth(const String& s) {
-    size_t i = 0;
-    BbSeg seg;
-    int w = 0;
-    while (bbNextSeg(s.c_str(), s.length(), &i, &seg)) {
-        if (seg.glyph < 0) w += sCanvas.textWidth(s.substring(seg.start, seg.end));
-        else w += EMOJI_ADV;
-    }
-    return w;
-}
-
-static void drawEmoji(int x, int y, int glyph) {
-    const uint8_t* art = kEmojiArt[glyph];
-    for (int dy = 0; dy < kEmojiPx; dy++)
-        for (int dx = 0; dx < kEmojiPx; dx++) {
-            uint8_t v = art[dy * kEmojiPx + dx];
-            if (v) sCanvas.drawPixel(x + dx, y + dy, kEmojiPalette[v]);
-        }
-}
-
-static void drawRich(int x, int y, const String& s, uint16_t fg, uint16_t bg) {
-    size_t i = 0;
-    BbSeg seg;
-    sCanvas.setTextColor(fg, bg);
-    while (bbNextSeg(s.c_str(), s.length(), &i, &seg)) {
-        if (seg.glyph < 0) {
-            String run = s.substring(seg.start, seg.end);
-            sCanvas.setCursor(x, y);
-            sCanvas.print(run);
-            x += sCanvas.textWidth(run);
-        } else {
-            drawEmoji(x, y, seg.glyph);
-            x += EMOJI_ADV;
-        }
-    }
-}
-
-// Tronque une chaîne UTF-8 à une largeur en pixels, sans couper un caractère
-// multi-octets, avec "…" si besoin.
-static String fitText(const String& s, int maxW) {
-    if (richWidth(s) <= maxW) return s;
-    String out;
-    for (size_t i = 0; i < s.length();) {
-        size_t n = 1;
-        uint8_t c = s[i];
-        if ((c & 0xE0) == 0xC0) n = 2;
-        else if ((c & 0xF0) == 0xE0) n = 3;
-        else if ((c & 0xF8) == 0xF0) n = 4;
-        String next = out + s.substring(i, i + n);
-        if (richWidth(next + "…") > maxW) break;
-        out = next;
-        i += n;
-    }
-    return out + "…";
-}
-
-// Coupe un texte en lignes tenant dans maxW pixels (coupure aux espaces
-// quand c'est possible, sinon au caractère, frontières UTF-8 respectées).
-static void wrapText(const String& s, int maxW, std::vector<String>& lines) {
-    String line;
-    String word;
-    auto flushWord = [&]() {
-        if (!word.length()) return;
-        String cand = line.length() ? line + " " + word : word;
-        if (richWidth(cand) <= maxW) {
-            line = cand;
-        } else {
-            if (line.length()) lines.push_back(line);
-            // Mot plus large que l'écran : coupe au caractère.
-            while (richWidth(word) > maxW) {
-                String part;
-                for (size_t i = 0; i < word.length();) {
-                    size_t n = 1;
-                    uint8_t c = word[i];
-                    if ((c & 0xE0) == 0xC0) n = 2;
-                    else if ((c & 0xF0) == 0xE0) n = 3;
-                    else if ((c & 0xF8) == 0xF0) n = 4;
-                    if (richWidth(part + word.substring(i, i + n)) > maxW) break;
-                    part += word.substring(i, i + n);
-                    i += n;
-                }
-                if (!part.length()) break;
-                lines.push_back(part);
-                word = word.substring(part.length());
-            }
-            line = word;
-        }
-        word = "";
-    };
-    for (size_t i = 0; i < s.length(); i++) {
-        char c = s[i];
-        if (c == ' ') flushWord();
-        else if (c == '\n') { flushWord(); lines.push_back(line); line = ""; }
-        else word += c;
-    }
-    flushWord();
-    if (line.length()) lines.push_back(line);
-    if (lines.empty()) lines.push_back("");
-}
-
-static String timeShort(int64_t msEpoch) {
-    if (!msEpoch) return "";
-    time_t t = msEpoch / 1000;
-    struct tm tmv;
-    localtime_r(&t, &tmv);
-    char buf[6];
-    snprintf(buf, sizeof(buf), "%02d:%02d", tmv.tm_hour, tmv.tm_min);
-    return buf;
-}
-
-static void drawTopBar(const String& title) {
-    sCanvas.fillRect(0, 0, SCREEN_W, BAR_H, C_INK800);
-    sCanvas.setTextColor(C_BLUE400, C_INK800);
-    sCanvas.setCursor(5, 2);
-    sCanvas.print(fitText(title, 168));
-
-    int batt = M5Cardputer.Power.getBatteryLevel();
-    String right = String(batt) + "%";
-    sCanvas.setTextColor(batt < 20 ? C_RED400 : C_SLATE300, C_INK800);
-    sCanvas.setCursor(SCREEN_W - sCanvas.textWidth(right) - 5, 2);
-    sCanvas.print(right);
-
-    // Point d'état réseau : bleu quand la synchro est fraîche, ambre pendant
-    // le rattrapage, rouge hors ligne. Trois pixels valent une phrase.
-    uint16_t dot = WiFi.status() != WL_CONNECTED ? C_RED400
-                                                 : (sSynced ? C_BLUE400 : C_AMBER400);
-    sCanvas.fillCircle(SCREEN_W - sCanvas.textWidth(right) - 12, 8, 2, dot);
-}
-
-// Barre d'aide : les raccourcis, toujours au même endroit.
-static void drawHintBar(const String& hint) {
-    int y = SCREEN_H - HINT_H;
-    sCanvas.fillRect(0, y, SCREEN_W, HINT_H, C_INK800);
-    sCanvas.setTextColor(C_SLATE300, C_INK800);
-    sCanvas.setCursor(5, y + 1);
-    sCanvas.print(fitText(hint, SCREEN_W - 10));
-}
-
-// Bandeau d'erreur : il recouvre la barre d'aide, jamais le contenu — la
-// liste en cache reste lisible pendant que l'appareil se rattrape.
-static void drawStatusLine(const String& st) {
-    if (!st.length()) return;
-    int y = SCREEN_H - HINT_H;
-    // Heuristique bilingue : les deux langues doivent virer au rouge — un
-    // mot-clé oublié laisserait une erreur en gris, indistinguable d'un état.
-    static const char* kErr[] = {"Erreur", "Echec", "Error", "failed", "injoignable",
-                                 "Occupe", "Busy",  "HTTP",  "Delai",  "imeout",
-                                 "Memoire", "memory", "WiFi", "not found"};
-    bool err = false;
-    for (const char* k : kErr)
-        if (st.indexOf(k) >= 0) { err = true; break; }
-    uint16_t col = err ? C_RED400 : (st.indexOf("OK") >= 0 ? C_GREEN400 : C_SLATE300);
-    sCanvas.fillRect(0, y, SCREEN_W, HINT_H, C_INK800);
-    sCanvas.fillRect(0, y, 2, HINT_H, col);
-    sCanvas.setTextColor(col, C_INK800);
-    sCanvas.setCursor(7, y + 1);
-    sCanvas.print(fitText(st, SCREEN_W - 12));
-}
-
-// ---------------------------------------------------------------------------
-// Écrans
-// ---------------------------------------------------------------------------
-
-static void drawSetup() {
-    sCanvas.fillSprite(C_INK900);
-    drawTopBar(T(S_SETUP_REQUIRED));
-    int y = 24;
-    auto step = [&](const char* n, const String& main, const String& sub) {
-        sCanvas.setTextColor(C_BLUE400, C_INK900);
-        sCanvas.setCursor(8, y);
-        sCanvas.print(n);
-        sCanvas.setTextColor(C_WHITE, C_INK900);
-        sCanvas.setCursor(21, y);
-        sCanvas.print(fitText(main, SCREEN_W - 27));
-        y += 12;
-        if (sub.length()) {
-            sCanvas.setTextColor(C_SLATE300, C_INK900);
-            sCanvas.setCursor(21, y);
-            sCanvas.print(fitText(sub, SCREEN_W - 27));
-            y += 12;
-        }
-        y += 4;
-    };
-    step("1", "Reseau WiFi  " + ConfigPortal::apSsid(), "mot de passe  " + ConfigPortal::apPass());
-    step("2", "http://192.168.4.1", "");
-    step("3", "Renseignez WiFi et serveur", "l'appareil redemarre ensuite");
-    drawHintBar(T(S_PORTAL_OPEN));
-    drawStatusLine(sStatus);
-}
-
-// Plein écran de calibration : le seul moment où il n'y a effectivement rien
-// à montrer. Progression déterministe (le nombre de pages est connu).
-static void drawCalibrating() {
-    sCanvas.fillSprite(C_INK900);
-    drawTopBar(T(S_CONVERSATIONS));
-    sCanvas.setTextColor(C_BLUE400, C_INK900);
-    String t = T(S_CALIBRATION);
-    sCanvas.setCursor((SCREEN_W - sCanvas.textWidth(t)) / 2, 48);
-    sCanvas.print(t);
-    sCanvas.setTextColor(C_SLATE300, C_INK900);
-    String s = T(S_CALIB_SUB);
-    sCanvas.setCursor((SCREEN_W - sCanvas.textWidth(s)) / 2, 64);
-    sCanvas.print(s);
-
-    sCanvas.fillRoundRect(50, 82, 140, 5, 2, C_INK700);
-    int done = sCalibPage, total = sCalibTotal ? sCalibTotal : 1;
-    int w = 140 * min(done, total) / total;
-    if (w > 0) sCanvas.fillRoundRect(50, 82, w, 5, 2, C_BLUE400);
-
-    String p = String(T(S_PAGE)) + " " + done + " / " + total;
-    sCanvas.setCursor((SCREEN_W - sCanvas.textWidth(p)) / 2, 94);
-    sCanvas.print(p);
-    drawHintBar(T(S_PLEASE_WAIT));
-}
-
-// Modal de recalibration : la liste reste visible dessous (un écran d'état ne
-// remplace jamais du contenu déjà chargé — docs/05), mais le modal reste
-// affiché pendant TOUT le balayage et le clavier est ignoré : plus de liste
-// partielle commise par une calibration interrompue.
-static void drawCalibModal() {
-    const int w = 184, h = 56;
-    const int x = (SCREEN_W - w) / 2, y = 36;
-    sCanvas.fillRoundRect(x, y, w, h, 5, C_INK800);
-    sCanvas.drawRoundRect(x, y, w, h, 5, C_BLUE400);
-
-    sCanvas.setTextColor(C_BLUE400, C_INK800);
-    String t = T(S_CALIBRATION);
-    sCanvas.setCursor(x + (w - sCanvas.textWidth(t)) / 2, y + 8);
-    sCanvas.print(t);
-
-    int total = sCalibTotal ? sCalibTotal : 1;
-    int done = min((int)sCalibPage, total);
-    sCanvas.fillRoundRect(x + 22, y + 27, w - 44, 5, 2, C_INK600);
-    int bw = (w - 44) * done / total;
-    if (bw > 0) sCanvas.fillRoundRect(x + 22, y + 27, bw, 5, 2, C_BLUE400);
-
-    sCanvas.setTextColor(C_SLATE300, C_INK800);
-    String p = String(T(S_PAGE)) + " " + done + " / " + total;
-    sCanvas.setCursor(x + (w - sCanvas.textWidth(p)) / 2, y + 38);
-    sCanvas.print(p);
-    drawHintBar(T(S_PLEASE_WAIT));
-}
-
-static void drawChats() {
-    sCanvas.fillSprite(C_INK900);
-    drawTopBar(T(S_CONVERSATIONS));
-    const int rowH = 26;
-    const int visible = 4;
-    if (sChatSel < sChatTop) sChatTop = sChatSel;
-    if (sChatSel >= sChatTop + visible) sChatTop = sChatSel - visible + 1;
-
-    if (sChats.empty()) {
-        sCanvas.setTextColor(C_SLATE300, C_INK900);
-        String e = "Aucune conversation";
-        sCanvas.setCursor((SCREEN_W - sCanvas.textWidth(e)) / 2, 60);
-        sCanvas.print(e);
-    }
-    for (int i = 0; i < visible; i++) {
-        int idx = sChatTop + i;
-        if (idx >= (int)sChats.size()) break;
-        const BBChat& c = sChats[idx];
-        int y = BAR_H + i * rowH;
-        bool sel = (idx == sChatSel);
-        uint16_t bg = sel ? C_INK600 : C_INK900;
-        if (sel) {
-            sCanvas.fillRect(0, y, SCREEN_W, rowH, C_INK600);
-            sCanvas.fillRect(0, y, 2, rowH, C_BLUE400);  // filet : le fond seul est trop discret
-        }
-
-        bool unread = c.lastDate > 0 && c.lastDate > sSeen[c.key] && !c.lastFromMe;
-        int nx = EDGE;
-        if (unread) {
-            sCanvas.fillCircle(9, y + 8, 2, C_AMBER400);
-            nx = 15;
-        }
-        String ts = timeShort(c.lastDate);
-        drawRich(nx, y + 2, fitText(c.title, SCREEN_W - nx - sCanvas.textWidth(ts) - 12),
-                 unread ? C_WHITE : C_SLATE200, bg);
-
-        sCanvas.setTextColor(C_SLATE300, bg);
-        sCanvas.setCursor(SCREEN_W - sCanvas.textWidth(ts) - 5, y + 2);
-        sCanvas.print(ts);
-
-        String preview = (c.lastFromMe ? "moi : " : "") + c.lastText;
-        preview.replace("\n", " ");
-        drawRich(nx, y + 14, fitText(preview, SCREEN_W - nx - 6), C_SLATE300, bg);
-
-        if (i < visible - 1 && idx + 1 < (int)sChats.size() && !sel)
-            sCanvas.drawFastHLine(EDGE, y + rowH - 1, SCREEN_W - EDGE * 2, C_INK700);
-    }
-    drawHintBar(T(S_HINT_CHATS));
-    drawStatusLine(sStatus);
-}
-
-// Une bulle : rectangle arrondi + ergot de 3 px sur le coin bas extérieur.
-// C'est l'ergot qui fait « messagerie » plutôt que « liste ».
-static void drawBubble(int x, int y, int w, int h, bool sent, uint16_t fill) {
-    sCanvas.fillRoundRect(x, y, w, h, BUB_R, fill);
-    if (sent) {
-        sCanvas.fillTriangle(x + w - BUB_R, y + h - 1, x + w + BUB_TAIL - 1, y + h - 1,
-                             x + w - 1, y + h - 5, fill);
-    } else {
-        sCanvas.fillTriangle(x + BUB_R, y + h - 1, x - BUB_TAIL + 1, y + h - 1,
-                             x + 1, y + h - 5, fill);
-    }
-}
-
-// Badge de réactions : pilule à cheval sur le coin haut de la bulle, décalée
-// vers le centre de l'écran (comme iMessage). Jusqu'à 3 types de réaction en
-// glyphes (❤ 👍 👎 😂) ou en texte (!! ?), et un « xN » si le total dépasse
-// ce qui est montré.
-static void drawTapBadge(int bx, int bw, int y, bool sent, const uint8_t* taps) {
-    static const uint32_t kCp[BB_TAP_TYPES] = {0x2764, 0x1F44D, 0x1F44E, 0x1F602, 0, 0};
-    static const char* kTxt[BB_TAP_TYPES] = {nullptr, nullptr, nullptr, nullptr, "!!", "?"};
-
-    int total = 0, shown = 0, w = 0;
-    int items[3];
-    for (int i = 0; i < BB_TAP_TYPES; i++) {
-        if (!taps[i]) continue;
-        total += taps[i];
-        if (shown < 3) {
-            items[shown++] = i;
-            w += kTxt[i] ? sCanvas.textWidth(kTxt[i]) : EMOJI_ADV;
-        }
-    }
-    if (!shown) return;
-    char cnt[8] = "";
-    if (total > shown) {
-        snprintf(cnt, sizeof(cnt), "x%d", total);
-        w += sCanvas.textWidth(cnt) + 2;
-    }
-    w += 8;  // marges internes
-
-    // À cheval sur le coin de la bulle, débordant vers le centre de l'écran.
-    int x = sent ? bx - w + 12 : bx + bw - 12;
-    x = max(2, min(x, SCREEN_W - 2 - w));
-
-    sCanvas.fillRoundRect(x, y, w, TAP_H, TAP_H / 2, C_INK800);
-    sCanvas.drawRoundRect(x, y, w, TAP_H, TAP_H / 2, C_INK600);
-    int cx = x + 4;
-    for (int k = 0; k < shown; k++) {
-        int i = items[k];
-        if (kTxt[i]) {
-            sCanvas.setTextColor(C_WHITE, C_INK800);
-            sCanvas.setCursor(cx, y + 2);
-            sCanvas.print(kTxt[i]);
-            cx += sCanvas.textWidth(kTxt[i]);
-        } else {
-            drawEmoji(cx, y + 2, bbEmojiGlyph(kCp[i]));
-            cx += EMOJI_ADV;
-        }
-    }
-    if (cnt[0]) {
-        sCanvas.setTextColor(C_SLATE300, C_INK800);
-        sCanvas.setCursor(cx + 2, y + 2);
-        sCanvas.print(cnt);
-    }
-}
-
-static void drawMessages(bool composeMode) {
-    sCanvas.fillSprite(C_INK900);
-    drawTopBar(sCurChatTitle);
-
-    // Mise en page préalable : chaque message devient un bloc (bulle) dont on
-    // connaît la hauteur, plus d'éventuels séparateurs temporels.
-    struct Block {
-        std::vector<String> lines;
-        int h = 0, w = 0;
-        int pad = 0;              // réserve au-dessus de la bulle (badge réactions)
-        const uint8_t* taps = nullptr;  // compteurs de réactions du message
-        bool sent = false;
-        bool separator = false;   // horodatage centré
-        bool senderHdr = false;   // nom de l'expéditeur (groupes)
-        String sepText;
-    };
-    std::vector<Block> blocks;
-    const int contentW = BUB_MAXW - BUB_PADX * 2;
-    const bool isGroup = sCurChatKey.startsWith("g:");
-    int64_t prevDate = 0;
-    bool prevFromMe = false;
-    String prevSender;
-    bool first = true;
-
-    for (const BBMsg& m : sMsgs) {
-        // Séparateur temporel centré au-delà d'un quart d'heure de silence —
-        // moins coûteux qu'un horodatage dans chaque bulle (design/geometry).
-        if (!first && m.date && prevDate && m.date - prevDate > 15 * 60000LL) {
-            Block s;
-            s.separator = true;
-            s.sepText = timeShort(m.date);
-            s.h = 12;
-            blocks.push_back(s);
-        }
-        // Dans un groupe, l'alignement ne dit que « pas moi » : le nom de
-        // l'expéditeur s'affiche au changement de voix (comme l'app officielle).
-        if (isGroup && !m.fromMe && m.sender.length() && m.sender != prevSender) {
-            Block h;
-            h.senderHdr = true;
-            h.sepText = m.sender;
-            h.h = 11;
-            blocks.push_back(h);
-        }
-        prevSender = m.fromMe ? String() : m.sender;
-        Block b;
-        b.sent = m.fromMe;
-        wrapText(m.text, contentW, b.lines);
-        int tw = 0;
-        for (const String& l : b.lines) tw = max(tw, richWidth(l));
-        b.w = tw + BUB_PADX * 2;
-        // Un message avec réactions réserve la place du badge au-dessus de sa
-        // bulle (le badge la chevauche de quelques pixels, comme iMessage).
-        for (int k = 0; k < BB_TAP_TYPES; k++)
-            if (m.taps[k]) { b.pad = TAP_PAD; b.taps = m.taps; break; }
-        b.h = (int)b.lines.size() * LINE_H + BUB_PADY * 2 + b.pad;
-        // L'espacement dit qui parle : serré dans un même tour, aéré au
-        // changement d'interlocuteur.
-        if (!first && !blocks.empty() && !blocks.back().separator && !blocks.back().senderHdr)
-            blocks.back().h += (m.fromMe == prevFromMe) ? GAP_SAME : GAP_TURN;
-        blocks.push_back(b);
-        prevDate = m.date;
-        prevFromMe = m.fromMe;
-        first = false;
-    }
-
-    int composeH = composeMode ? 24 : 0;
-    int areaTop = BAR_H + 3;
-    int areaBot = SCREEN_H - HINT_H - composeH;
-    int areaH = areaBot - areaTop;
-
-    int total = 0;
-    for (const Block& b : blocks) total += b.h;
-    int maxScrollPx = max(0, total - areaH);
-
-    // Défilement par ARRÊTS DE BULLE (bb_scroll.h, logique testée en natif) :
-    // un pas en lignes laissait la bulle du haut coupée, et l'arrondi de la
-    // borne rendait ses derniers pixels définitivement inaccessibles.
-    const int STOPS_MAX = 64;  // 256 o de pile ; débordement → dernier arrêt = borne
-    int stops[STOPS_MAX];
-    {
-        // Vue légère des blocs (8 o chacun, ~0,7 Ko au pire) : bb_scroll.h ne
-        // connaît que des hauteurs, ce qui le rend testable en natif.
-        std::vector<BbBlockInfo> info(blocks.size());
-        for (size_t i = 0; i < blocks.size(); i++) {
-            info[i].h = blocks[i].h;
-            info[i].header = blocks[i].separator || blocks[i].senderHdr;
-        }
-        sMsgStops = bbScrollStops(info.data(), (int)info.size(), areaH, stops, STOPS_MAX);
-    }
-    if (sMsgScroll >= sMsgStops) sMsgScroll = sMsgStops - 1;
-    if (sMsgScroll < 0) sMsgScroll = 0;
-    int scrollPx = stops[sMsgScroll];
-
-    // Le contenu est ancré en bas ; défiler le POUSSE VERS LE BAS pour
-    // découvrir l'historique au-dessus (un `-` ici ne faisait que vider
-    // l'écran par le haut sans jamais révéler un message plus ancien).
-    int y = areaBot + scrollPx;
-    for (int i = (int)blocks.size() - 1; i >= 0; i--) {
-        const Block& b = blocks[i];
-        y -= b.h;
-        if (y > areaBot) continue;
-        // Hauteur VISIBLE du bloc : sans l'écart d'après coup ni la réserve
-        // du badge — la bulle elle-même commence à y + pad.
-        int bodyH = (b.separator || b.senderHdr)
-                        ? b.h
-                        : (int)b.lines.size() * LINE_H + BUB_PADY * 2;
-        int by = y + b.pad;
-        if (by + bodyH < areaTop) break;
-
-        if (b.separator) {
-            sCanvas.setTextColor(C_SLATE300, C_INK900);
-            sCanvas.setCursor((SCREEN_W - sCanvas.textWidth(b.sepText)) / 2, y + 1);
-            sCanvas.print(b.sepText);
-            continue;
-        }
-        if (b.senderHdr) {
-            drawRich(EDGE + 2, y, fitText(b.sepText, BUB_MAXW), C_SLATE300, C_INK900);
-            continue;
-        }
-        int x = b.sent ? SCREEN_W - EDGE - b.w : EDGE;
-        uint16_t fill = b.sent ? C_BLUE500 : C_INK700;
-        // Découpe verticale : une bulle à cheval sur le bord est tronquée par
-        // le sprite, pas dessinée à moitié.
-        if (by + bodyH > areaTop && by < areaBot) {
-            drawBubble(x, by, b.w, bodyH, b.sent, fill);
-            for (size_t li = 0; li < b.lines.size(); li++) {
-                int ly = by + BUB_PADY + (int)li * LINE_H;
-                if (ly < areaTop - LINE_H || ly > areaBot) continue;
-                drawRich(x + BUB_PADX, ly, b.lines[li], C_WHITE, fill);
-            }
-        }
-        // Le badge vit dans la réserve, à cheval sur le coin haut de la bulle.
-        if (b.taps && y + TAP_H > areaTop && y < areaBot)
-            drawTapBadge(x, b.w, y, b.sent, b.taps);
-    }
-    // Masque ce qui déborde des barres — jusqu'à areaTop inclus, sinon une
-    // bande de 3 px sous la barre garde des fragments de glyphes.
-    sCanvas.fillRect(0, BAR_H, SCREEN_W, areaTop - BAR_H, C_INK900);
-    sCanvas.fillRect(0, 0, SCREEN_W, BAR_H, C_INK800);
-    drawTopBar(sCurChatTitle);
-
-    if (blocks.empty()) {
-        sCanvas.setTextColor(C_SLATE300, C_INK900);
-        String e = sStatusView.length() ? "" : T(S_EMPTY_CHAT);
-        if (e.length()) {
-            sCanvas.setCursor((SCREEN_W - sCanvas.textWidth(e)) / 2, 60);
-            sCanvas.print(e);
-        }
-    }
-
-    if (composeMode) {
-        // Le champ est surélevé et cerné de bleu : il pousse la conversation
-        // vers le haut au lieu de la recouvrir — on voit à qui l'on répond.
-        int cy = SCREEN_H - HINT_H - composeH;
-        sCanvas.fillRect(0, cy, SCREEN_W, composeH, C_INK800);
-        sCanvas.fillRoundRect(4, cy + 3, SCREEN_W - 8, 18, 6, C_INK700);
-        sCanvas.drawRoundRect(4, cy + 3, SCREEN_W - 8, 18, 6, C_BLUE400);
-        String shown = sCompose;
-        while (richWidth(shown) > SCREEN_W - 24 && shown.length())
-            shown = shown.substring(1);
-        drawRich(9, cy + 6, shown, C_WHITE, C_INK700);
-        sCanvas.fillRect(9 + richWidth(shown) + 1, cy + 6, 1, 12, C_BLUE400);
-    }
-
-    drawHintBar(composeMode ? T(S_HINT_COMPOSE) : T(S_HINT_MSGS));
-    drawStatusLine(sStatusView);
-}
-
-static void drawInfo() {
-    sCanvas.fillSprite(C_INK900);
-    drawTopBar(T(S_INFO));
-    int y = BAR_H + 4;
-    auto row = [&](const String& k, const String& v, uint16_t col = C_WHITE) {
-        sCanvas.setTextColor(C_SLATE300, C_INK900);
-        sCanvas.setCursor(6, y);
-        sCanvas.print(k);
-        sCanvas.setTextColor(col, C_INK900);
-        sCanvas.setCursor(78, y);
-        sCanvas.print(fitText(v, SCREEN_W - 84));
-        y += 13;
-    };
-    row(T(S_VERSION), APP_VERSION);
-    row("WiFi", WiFi.SSID() + "  " + WiFi.RSSI() + " dBm");
-    row("IP", WiFi.localIP().toString());
-    row(T(S_CONFIG), "cardputer.local");
-    row(T(S_SERVER), gConfig.serverUrl);
-    row(T(S_SYNC), sMarker ? timeShort(sMarker) : "—", sSynced ? C_GREEN400 : C_AMBER400);
-    row(T(S_HISTORY), String(gConfig.histDepth) + " " + T(S_MESSAGES_UNIT));
-    row(T(S_TLS), gConfig.tlsVerify ? T(S_TLS_ON) : T(S_TLS_OFF),
-        gConfig.tlsVerify ? C_GREEN400 : C_AMBER400);
-    drawHintBar(T(S_HINT_INFO));
-    drawStatusLine(sStatus);
-}
-
-// ---------------------------------------------------------------------------
-// Réglages sur l'appareil. Périmètre volontairement restreint aux champs
-// NUMÉRIQUES/BOOLÉENS : la tâche réseau (cœur 0) lit gConfig en permanence, et
-// réaffecter une String depuis le cœur 1 la ferait planter (piège déjà
-// rencontré côté portail — voir handleSave). WiFi, URL, mot de passe et TLS
-// restent donc l'apanage du portail web, qui écrit une copie puis redémarre.
-// ---------------------------------------------------------------------------
-
-enum SetField : uint8_t {
-    SET_LANG, SET_VOL, SET_KEYS, SET_SEND, SET_RECV, SET_NOTIF,
-    SET_POLL, SET_HIST, SET_COUNT
-};
-static int sSetSel = 0;
+// Le rendu vit dans src/ui/ (portable appareil/simulateur). Ici : l'état,
+// le réseau, la persistance, le clavier — et le modèle qu'on donne au rendu.
+static UiModel sUi;
 static bool sSetDirty = false;  // une valeur a changé : à enregistrer en sortant
-
-static String setValueText(uint8_t f) {
-    switch (f) {
-        case SET_LANG:  return gConfig.lang == LANG_FR ? "Francais" : "English";
-        case SET_VOL:   return String(gConfig.sndVolume) + " %";
-        case SET_KEYS:  return T(gConfig.sndKeys ? S_ON : S_OFF);
-        case SET_SEND:  return T(gConfig.sndSend ? S_ON : S_OFF);
-        case SET_RECV:  return T(gConfig.sndRecv ? S_ON : S_OFF);
-        case SET_NOTIF: return T(gConfig.sndNotif ? S_ON : S_OFF);
-        case SET_POLL:  return String(gConfig.pollSec) + " s";
-        case SET_HIST:  return String(gConfig.histDepth) + " " + T(S_MESSAGES_UNIT);
-    }
-    return "";
-}
-
-static StrId setLabel(uint8_t f) {
-    switch (f) {
-        case SET_LANG:  return S_LANGUAGE;
-        case SET_VOL:   return S_VOLUME;
-        case SET_KEYS:  return S_SND_KEYS;
-        case SET_SEND:  return S_SND_SENT;
-        case SET_RECV:  return S_SND_RECV;
-        case SET_NOTIF: return S_SND_NOTIF;
-        case SET_POLL:  return S_POLL;
-        case SET_HIST:  return S_HISTORY;
-    }
-    return S_SETTINGS;
-}
 
 // delta = +1 / -1. Les bornes sont celles du portail : les deux chemins de
 // configuration doivent produire exactement les mêmes valeurs valides.
@@ -792,54 +145,18 @@ static void setAdjust(uint8_t f, int delta) {
     sSetDirty = true;
 }
 
-static void drawSettings() {
-    sCanvas.fillSprite(C_INK900);
-    drawTopBar(T(S_SETTINGS));
-
-    const int rowH = 13;
-    const int visible = 6;
-    int top = 0;
-    if (sSetSel >= visible) top = sSetSel - visible + 1;
-    int y = BAR_H + 3;
-    for (int i = top; i < (int)SET_COUNT && i < top + visible; i++) {
-        bool sel = (i == sSetSel);
-        if (sel) {
-            sCanvas.fillRect(0, y - 1, SCREEN_W, rowH, C_INK600);
-            sCanvas.fillRect(0, y - 1, 2, rowH, C_BLUE400);
-        }
-        uint16_t bg = sel ? C_INK600 : C_INK900;
-        sCanvas.setTextColor(sel ? C_WHITE : C_SLATE300, bg);
-        sCanvas.setCursor(7, y);
-        sCanvas.print(T(setLabel(i)));
-        sCanvas.setTextColor(sel ? C_BLUE400 : C_SLATE200, bg);
-        String v = setValueText(i);
-        sCanvas.setCursor(SCREEN_W - 7 - sCanvas.textWidth(v), y);
-        sCanvas.print(v);
-        y += rowH;
-    }
-    // Rappel de la frontière avec le portail : ce qui ne se règle pas ici.
-    sCanvas.setTextColor(C_SLATE300, C_INK900);
-    String note = fitText(T(S_PORTAL_ONLY), SCREEN_W - 14);
-    sCanvas.setCursor(7, SCREEN_H - HINT_H - 13);
-    sCanvas.print(note);
-    drawHintBar(T(S_HINT_SETTINGS));
-    drawStatusLine(sStatus);
-}
-
 static void render() {
     DataLock l;  // la tâche réseau peut modifier chats/messages/statut
-    switch (sScreen) {
-        case SCR_SETUP:    drawSetup(); break;
-        // Plein écran de calibration si la liste est vide (synchro initiale) ;
-        // sinon la liste en cache reste visible sous le modal de progression.
-        case SCR_CHATS:    if (sCalibrating && sChats.empty()) drawCalibrating();
-                           else { drawChats(); if (sCalibrating) drawCalibModal(); }
-                           break;
-        case SCR_MESSAGES: drawMessages(false); break;
-        case SCR_COMPOSE:  drawMessages(true); break;
-        case SCR_INFO:     drawInfo(); break;
-        case SCR_SETTINGS: drawSettings(); break;
-    }
+    sUi.battery = M5Cardputer.Power.getBatteryLevel();
+    sUi.wifiOk = WiFi.status() == WL_CONNECTED;
+    sUi.rssi = (int)WiFi.RSSI();
+    sUi.ssid = WiFi.SSID();
+    sUi.ip = WiFi.localIP().toString();
+    sUi.marker = sMarker;
+    sUi.version = APP_VERSION;
+    sUi.apSsid = ConfigPortal::apSsid();
+    sUi.apPass = ConfigPortal::apPass();
+    uiRender(sCanvas, sUi);
     if (sSpriteOk) sCanvas.pushSprite(&M5Cardputer.Display, 0, 0);
     sDirty = false;
 }
@@ -864,7 +181,7 @@ static const uint8_t LIST_MAX = 20;
 
 // Sous DataLock.
 static void storeSave() {
-    std::vector<BBChat> byScore = sChats;
+    std::vector<BBChat> byScore = sUi.chats;
     std::sort(byScore.begin(), byScore.end(),
               [](const BBChat& a, const BBChat& b) { return a.score > b.score; });
     if (byScore.size() > PINNED_MAX) byScore.resize(PINNED_MAX);
@@ -970,9 +287,9 @@ static bool storeLoad() {
     }
     std::sort(loaded.begin(), loaded.end(),
               [](const BBChat& a, const BBChat& b2) { return a.lastDate > b2.lastDate; });
-    sChats = loaded;
-    for (const BBChat& c : sChats) sSeen[c.key] = c.lastDate;  // rien de « nouveau » au boot
-    return !sChats.empty();
+    sUi.chats = loaded;
+    for (const BBChat& c : sUi.chats) sUi.seen[c.key] = c.lastDate;  // rien de « nouveau » au boot
+    return !sUi.chats.empty();
 }
 
 // ---------------------------------------------------------------------------
@@ -998,7 +315,7 @@ static String previewOf(const BBRecent& r) {
 
 // Intègre un message récent dans `list`. `track` : met à jour l'état non-lu
 // et le bip (faux pendant la calibration, qui construit une liste détachée).
-// Appelée sous DataLock quand list == sChats.
+// Appelée sous DataLock quand list == sUi.chats.
 static void absorbInto(std::vector<BBChat>& list, const BBRecent& r, int64_t nowMs,
                        bool detached) {
     if (r.isEvent) return;  // les événements n'alimentent que le marqueur
@@ -1026,9 +343,9 @@ static void absorbInto(std::vector<BBChat>& list, const BBRecent& r, int64_t now
         list.push_back(c);
         if (detached) return;
         sListChanged = true;
-        if (!sSeen.count(key)) {
-            if (r.fromMe) sSeen[key] = r.date;
-            else { sSeen[key] = 0; sNewIncoming = true; }
+        if (!sUi.seen.count(key)) {
+            if (r.fromMe) sUi.seen[key] = r.date;
+            else { sUi.seen[key] = 0; sNewIncoming = true; }
         }
         return;
     }
@@ -1053,41 +370,41 @@ static void absorbInto(std::vector<BBChat>& list, const BBRecent& r, int64_t now
         // que la conversation a vécu depuis (2026-08-16).
         if (!detached) sListChanged = true;
         if (!detached && !r.fromMe) {
-            auto it = sSeen.find(key);
-            if (it == sSeen.end() || r.date > it->second) sNewIncoming = true;
+            auto it = sUi.seen.find(key);
+            if (it == sUi.seen.end() || r.date > it->second) sNewIncoming = true;
         }
     }
 }
 
 // Sous DataLock : intègre dans la liste affichée.
 static void absorb(const BBRecent& r, int64_t nowMs, bool quiet) {
-    absorbInto(sChats, r, nowMs, quiet);
+    absorbInto(sUi.chats, r, nowMs, quiet);
 }
 
 // Tri par activité + éviction — mais jamais d'une épinglée (top-15 par
 // score) : une conversation importante silencieuse reste listée. Sous DataLock.
 static void sortAndTrim() {
-    std::sort(sChats.begin(), sChats.end(),
+    std::sort(sUi.chats.begin(), sUi.chats.end(),
               [](const BBChat& a, const BBChat& b) { return a.lastDate > b.lastDate; });
-    if (sChats.size() > LIST_MAX) {
+    if (sUi.chats.size() > LIST_MAX) {
         // Ensemble explicite des épinglées (top PINNED_MAX par score, ex æquo
         // départagés par la date) : un seuil scalaire laisserait le repli
         // final tronquer une épinglée en cas d'égalité de score.
-        std::vector<int> idx(sChats.size());
+        std::vector<int> idx(sUi.chats.size());
         for (size_t i = 0; i < idx.size(); i++) idx[i] = (int)i;
         std::sort(idx.begin(), idx.end(), [](int a, int b) {
-            if (sChats[a].score != sChats[b].score) return sChats[a].score > sChats[b].score;
-            return sChats[a].lastDate > sChats[b].lastDate;
+            if (sUi.chats[a].score != sUi.chats[b].score) return sUi.chats[a].score > sUi.chats[b].score;
+            return sUi.chats[a].lastDate > sUi.chats[b].lastDate;
         });
-        std::vector<bool> pinned(sChats.size(), false);
+        std::vector<bool> pinned(sUi.chats.size(), false);
         for (size_t i = 0; i < idx.size() && i < PINNED_MAX; i++) pinned[idx[i]] = true;
-        for (int i = (int)sChats.size() - 1; i >= 0 && sChats.size() > LIST_MAX; i--)
+        for (int i = (int)sUi.chats.size() - 1; i >= 0 && sUi.chats.size() > LIST_MAX; i--)
             if (!pinned[i]) {
-                sChats.erase(sChats.begin() + i);
+                sUi.chats.erase(sUi.chats.begin() + i);
                 pinned.erase(pinned.begin() + i);
             }
     }
-    if (sChatSel >= (int)sChats.size()) sChatSel = max(0, (int)sChats.size() - 1);
+    if (sUi.chatSel >= (int)sUi.chats.size()) sUi.chatSel = max(0, (int)sUi.chats.size() - 1);
 }
 
 // Décroissance quotidienne des scores, cadencée par le marqueur (horloge
@@ -1097,7 +414,7 @@ static void maybeDecay() {
     if (sDecayDay == 0) { sDecayDay = day; return; }
     bool changed = false;
     while (day > sDecayDay) {
-        for (BBChat& c : sChats) c.score *= 0.95f;
+        for (BBChat& c : sUi.chats) c.score *= 0.95f;
         sDecayDay++;
         changed = true;
     }
@@ -1117,12 +434,12 @@ static void netWorkCalibrate() {
     const uint8_t MAX_PAGES = 30;  // ~300 messages (~25 s)
     const int64_t WINDOW_MS = 30LL * 86400000LL;
 
-    sCalibrating = true;
-    sCalibPage = 1;
-    sCalibTotal = MAX_PAGES;
+    sUi.calibrating = true;
+    sUi.calibPage = 1;
+    sUi.calibTotal = MAX_PAGES;
     {
         DataLock l;
-        sStatus = "";
+        sUi.status = "";
         sDirty = true;
     }
 
@@ -1144,8 +461,8 @@ static void netWorkCalibrate() {
         if (!sClient.fetchMessagesPage(before, 0, PAGE, batch, raw, rawOldest, err)) {
             if (page == 0) {
                 DataLock l;
-                sStatus = err;  // liste intacte
-                sCalibrating = false;
+                sUi.status = err;  // liste intacte
+                sUi.calibrating = false;
                 sCalibPending = false;
                 sDirty = true;
                 return;
@@ -1162,7 +479,7 @@ static void netWorkCalibrate() {
                 if (g == r.msgGuid) { dup = true; break; }
             if (!dup) absorbInto(built, r, newest, true);
         }
-        sCalibPage = min((int)page + 2, (int)MAX_PAGES);
+        sUi.calibPage = min((int)page + 2, (int)MAX_PAGES);
         { DataLock l; sDirty = true; }
         prevGuids.clear();
         for (const BBRecent& r : batch) prevGuids.push_back(r.msgGuid);
@@ -1181,8 +498,8 @@ static void netWorkCalibrate() {
     }
     if (built.empty()) {
         DataLock l;
-        sStatus = T(S_NO_CHATS);
-        sCalibrating = false;
+        sUi.status = T(S_NO_CHATS);
+        sUi.calibrating = false;
         sCalibPending = false;
         sDirty = true;
         return;
@@ -1194,29 +511,29 @@ static void netWorkCalibrate() {
         // remplacement — une calibration interrompue ne doit pas faire
         // disparaître des conversations déjà connues (liste réduite à une
         // page, 2026-08-16).
-        for (const BBChat& c : sChats) {
+        for (const BBChat& c : sUi.chats) {
             bool present = false;
             for (const BBChat& b : built)
                 if (b.key == c.key) { present = true; break; }
             if (!present) built.push_back(c);
         }
     }
-    sChats = built;
-    sSeen.clear();
-    for (const BBChat& c : sChats) sSeen[c.key] = c.lastDate;  // calibration = tout lu
+    sUi.chats = built;
+    sUi.seen.clear();
+    for (const BBChat& c : sUi.chats) sUi.seen[c.key] = c.lastDate;  // calibration = tout lu
     sortAndTrim();
-    sChatSel = 0;
-    sChatTop = 0;
+    sUi.chatSel = 0;
+    sUi.chatTop = 0;
     if (newest > sMarker) sMarker = newest;
     sPollBefore = 0;
     sPendingNewest = 0;
     sPollRounds = 0;
     sDecayDay = (int32_t)(sMarker / 86400000LL);
     storeSave();
-    sSynced = true;
-    sCalibrating = false;
+    sUi.synced = true;
+    sUi.calibrating = false;
     sCalibPending = false;
-    sStatus = "";
+    sUi.status = "";
     sDirty = true;
 }
 
@@ -1245,7 +562,7 @@ static void netWorkPoll() {
         int64_t rawOldest = 0;
         if (!sClient.fetchMessagesPage(before, after, PAGE, batch, raw, rawOldest, err)) {
             DataLock l;
-            sStatus = err;
+            sUi.status = err;
             sDirty = true;
             return;
         }
@@ -1289,7 +606,7 @@ static void netWorkPoll() {
         sPollBefore = 0;
         sPendingNewest = 0;
         sPollRounds = 0;
-        sStatus = "";
+        sUi.status = "";
     } else {
         // Rafale plus large que 5 pages : on garde le marqueur en arrière et on
         // reprendra au curseur au prochain poll. Au-delà de ~300 messages de
@@ -1300,15 +617,15 @@ static void netWorkPoll() {
             sPollBefore = 0;
             sPendingNewest = 0;
             sPollRounds = 0;
-            sStatus = T(S_CATCHUP_RECALIB);
+            sUi.status = T(S_CATCHUP_RECALIB);
             requestCalibration();
         } else {
-            sStatus = T(S_CATCHUP);
+            sUi.status = T(S_CATCHUP);
         }
     }
     maybeDecay();
     if (sListChanged) storeSave();  // entrée ou aperçu modifié : blob à jour
-    sSynced = true;
+    sUi.synced = true;
     sDirty = true;
 }
 
@@ -1329,7 +646,7 @@ static void applyTaps(const std::vector<BBTap>& taps) {
         if (seen) continue;
         sTapSeen.push_back(t.guid);
         if (sTapSeen.size() > 48) sTapSeen.erase(sTapSeen.begin());
-        for (BBMsg& m : sMsgs)
+        for (BBMsg& m : sUi.msgs)
             if (m.guid == t.target) {
                 bbTapApply(m.taps, t.type, t.remove);
                 sDirty = true;
@@ -1348,8 +665,8 @@ static void netWorkMsgs(const String& guid, bool incremental) {
     {
         DataLock l;
         epoch = sChatEpoch;
-        if (incremental && sCurChatGuid == guid && !sMsgs.empty())
-            after = sMsgs.back().date - 1;
+        if (incremental && sCurChatGuid == guid && !sUi.msgs.empty())
+            after = sUi.msgs.back().date - 1;
         else
             incremental = false;
         limit = incremental ? 20 : gConfig.histDepth;
@@ -1369,10 +686,10 @@ static void netWorkMsgs(const String& guid, bool incremental) {
             // Le fil n'existe plus côté Mac : le dire en français, et ne pas
             // laisser l'ancien contenu passer pour vivant.
             if (err.startsWith("HTTP 404")) {
-                sMsgs.clear();
-                sStatusView = T(S_CHAT_DELETED);
+                sUi.msgs.clear();
+                sUi.statusView = T(S_CHAT_DELETED);
             } else {
-                sStatusView = err;
+                sUi.statusView = err;
             }
         }
         sDirty = true;
@@ -1384,14 +701,14 @@ static void netWorkMsgs(const String& guid, bool incremental) {
     bool grew = false;
     int added = 0;  // bulles ajoutées en bas (décalage des arrêts de défilement)
     if (!incremental) {
-        grew = msgs.size() != sMsgs.size() ||
-               (msgs.size() && sMsgs.size() && msgs.back().guid != sMsgs.back().guid);
-        sMsgs = msgs;
+        grew = msgs.size() != sUi.msgs.size() ||
+               (msgs.size() && sUi.msgs.size() && msgs.back().guid != sUi.msgs.back().guid);
+        sUi.msgs = msgs;
         sTapSeen.clear();  // vue reconstruite : les compteurs repartent de zéro
     } else {
         for (const BBMsg& m : msgs) {
             bool dup = false;
-            for (BBMsg& e : sMsgs)
+            for (BBMsg& e : sUi.msgs)
                 if (e.guid == m.guid) {
                     dup = true;
                     // Message réapparu avec un texte différent : édition ou
@@ -1399,19 +716,19 @@ static void netWorkMsgs(const String& guid, bool incremental) {
                     if (e.text != m.text) { e.text = m.text; sDirty = true; }
                     break;
                 }
-            if (!dup) { sMsgs.push_back(m); grew = true; added++; }
+            if (!dup) { sUi.msgs.push_back(m); grew = true; added++; }
         }
         const size_t CAP = 30;  // borne mémoire de la vue
-        if (sMsgs.size() > CAP) sMsgs.erase(sMsgs.begin(), sMsgs.begin() + (sMsgs.size() - CAP));
+        if (sUi.msgs.size() > CAP) sUi.msgs.erase(sUi.msgs.begin(), sUi.msgs.begin() + (sUi.msgs.size() - CAP));
     }
     // Recalage sur le dernier message SEULEMENT si l'on y était déjà : arracher
     // le lecteur au milieu de l'historique parce qu'un message arrive serait
     // hostile. Sinon on décale l'index d'autant d'arrêts que de bulles ajoutées
     // en bas, pour garder la même bulle sous les yeux.
-    if (grew) sMsgScroll = (sMsgScroll > 0) ? sMsgScroll + added : 0;
+    if (grew) sUi.msgScroll = (sUi.msgScroll > 0) ? sUi.msgScroll + added : 0;
     applyTaps(taps);
-    if (!sMsgs.empty()) sSeen[sCurChatKey] = sMsgs.back().date;
-    sStatusView = "";
+    if (!sUi.msgs.empty()) sUi.seen[sUi.curChatKey] = sUi.msgs.back().date;
+    sUi.statusView = "";
     sDirty = true;
 }
 
@@ -1425,12 +742,12 @@ static void netWorkSend(const String& guid, const String& text) {
         // La requête est très probablement arrivée : restaurer le brouillon
         // risquerait un double envoi. Le polling confirmera.
         DataLock l;
-        sStatusView = T(S_SEND_UNCONFIRMED);
+        sUi.statusView = T(S_SEND_UNCONFIRMED);
         sDirty = true;
     } else {
         Snd::play(Snd::ERROR);
         DataLock l;
-        sStatusView = String(T(S_SEND_FAILED)) + err;
+        sUi.statusView = String(T(S_SEND_FAILED)) + err;
         sSendFailed = true;  // échec certain : on rend son brouillon
         sDirty = true;
     }
@@ -1456,9 +773,9 @@ static void netWorkDebug(const String& guid) {
 
 String appDebugConvRun(int index) {
     DataLock l;
-    if (index < 0 || index >= (int)sChats.size())
+    if (index < 0 || index >= (int)sUi.chats.size())
         return "{\"queued\":false,\"raison\":\"index hors liste\"}";
-    if (!netEnqueue(NET_DEBUG, sChats[index].guid))
+    if (!netEnqueue(NET_DEBUG, sUi.chats[index].guid))
         return "{\"queued\":false,\"raison\":\"file pleine\"}";
     sDbgResult = "{\"etat\":\"en cours\"}";
     return String("{\"queued\":true,\"index\":") + index + "}";
@@ -1492,7 +809,7 @@ static void netTask(void*) {
                 String err;
                 bool ok = sClient.ping(err);
                 DataLock l;
-                sStatus = ok ? String(T(S_SERVER_OK)) : (String(T(S_ERROR_PREFIX)) + err);
+                sUi.status = ok ? String(T(S_SERVER_OK)) : (String(T(S_ERROR_PREFIX)) + err);
                 sDirty = true;
                 break;
             }
@@ -1520,25 +837,25 @@ static void pollMessages(bool force = false) {
     // Une édition ou un retrait ne change pas dateCreated : l'incrémental ne
     // les revoit jamais. Un rechargement complet périodique (~1/min), et
     // seulement quand la vue est calée en bas, les rattrape sans à-coup.
-    bool full = (sMsgScroll == 0) && (++sMsgPollN >= 6);
+    bool full = (sUi.msgScroll == 0) && (++sMsgPollN >= 6);
     if (full) sMsgPollN = 0;
     netEnqueue(full ? NET_MSGS : NET_MSGS_INC, sCurChatGuid);
 }
 
 // Appelé sous DataLock (depuis handleKeys).
 static void openChat(int idx) {
-    if (idx < 0 || idx >= (int)sChats.size()) return;
-    sCurChatGuid = sChats[idx].guid;
-    sCurChatKey = sChats[idx].key;
-    sCurChatTitle = sChats[idx].title;
-    sMsgs.clear();
-    sMsgScroll = 0;
+    if (idx < 0 || idx >= (int)sUi.chats.size()) return;
+    sCurChatGuid = sUi.chats[idx].guid;
+    sUi.curChatKey = sUi.chats[idx].key;
+    sUi.curChatTitle = sUi.chats[idx].title;
+    sUi.msgs.clear();
+    sUi.msgScroll = 0;
     sMsgPollN = 0;  // le cycle de rechargement complet suit la conversation affichée
     sChatEpoch++;  // toute réponse réseau d'une ouverture précédente est périmée
-    sScreen = SCR_MESSAGES;
-    sSeen[sCurChatKey] = sChats[idx].lastDate;
+    sUi.screen = SCR_MESSAGES;
+    sUi.seen[sUi.curChatKey] = sUi.chats[idx].lastDate;
     sLastPollMsgs = millis();
-    sStatusView = netEnqueue(NET_MSGS, sCurChatGuid) ? T(S_LOADING)
+    sUi.statusView = netEnqueue(NET_MSGS, sCurChatGuid) ? T(S_LOADING)
                                                      : "Occupe : quittez et rouvrez";
     if (sMarker != sMarkerSaved) storeSaveMarker();  // « événement visible » : on persiste
     sDirty = true;
@@ -1547,17 +864,17 @@ static void openChat(int idx) {
 // Appelé sous DataLock (depuis handleKeys). L'envoi part en tâche de fond ;
 // le brouillon est restauré si l'envoi échoue.
 static void sendCompose() {
-    if (!sCompose.length()) return;
-    if (!netEnqueue(NET_SEND, sCurChatGuid, sCompose)) {
-        sStatusView = T(S_BUSY_RETRY);  // le brouillon reste à l'écran
+    if (!sUi.compose.length()) return;
+    if (!netEnqueue(NET_SEND, sCurChatGuid, sUi.compose)) {
+        sUi.statusView = T(S_BUSY_RETRY);  // le brouillon reste à l'écran
         sDirty = true;
         return;
     }
-    sSendBackup = sCompose;
+    sSendBackup = sUi.compose;
     sSendBackupGuid = sCurChatGuid;  // le brouillon appartient à CETTE conversation
-    sCompose = "";
-    sScreen = SCR_MESSAGES;
-    sStatusView = T(S_SENDING);
+    sUi.compose = "";
+    sUi.screen = SCR_MESSAGES;
+    sUi.statusView = T(S_SENDING);
     if (sMarker != sMarkerSaved) storeSaveMarker();
     sDirty = true;
 }
@@ -1573,66 +890,66 @@ static void handleKeys() {
     DataLock l;  // navigation et composition touchent les données partagées
     sDirty = true;
 
-    if (sScreen == SCR_COMPOSE) {
+    if (sUi.screen == SCR_COMPOSE) {
         if (ks.enter) { sendCompose(); return; }
-        if (ks.del && sCompose.length()) {
+        if (ks.del && sUi.compose.length()) {
             // Retire un caractère UTF-8 complet.
-            int i = sCompose.length() - 1;
-            while (i > 0 && (sCompose[i] & 0xC0) == 0x80) i--;
-            sCompose = sCompose.substring(0, i);
+            int i = sUi.compose.length() - 1;
+            while (i > 0 && (sUi.compose[i] & 0xC0) == 0x80) i--;
+            sUi.compose = sUi.compose.substring(0, i);
             return;
         }
         for (char c : ks.word) {
-            if (c == '`') { sScreen = SCR_MESSAGES; sStatusView = ""; return; }
-            sCompose += c;
+            if (c == '`') { sUi.screen = SCR_MESSAGES; sUi.statusView = ""; return; }
+            sUi.compose += c;
         }
         return;
     }
 
     for (char c : ks.word) {
-        switch (sScreen) {
+        switch (sUi.screen) {
             case SCR_CHATS:
-                if (sCalibrating) break;  // modal : clavier ignoré le temps du balayage
-                if (c == ';' && sChatSel > 0) sChatSel--;
-                else if (c == '.' && sChatSel < (int)sChats.size() - 1) sChatSel++;
-                else if (c == '`') sScreen = SCR_INFO;
+                if (sUi.calibrating) break;  // modal : clavier ignoré le temps du balayage
+                if (c == ';' && sUi.chatSel > 0) sUi.chatSel--;
+                else if (c == '.' && sUi.chatSel < (int)sUi.chats.size() - 1) sUi.chatSel++;
+                else if (c == '`') sUi.screen = SCR_INFO;
                 else if (c == 'r')
-                    sStatus = requestCalibration() ? T(S_CALIBRATING) : T(S_BUSY_RETRY);
+                    sUi.status = requestCalibration() ? T(S_CALIBRATING) : T(S_BUSY_RETRY);
                 break;
             case SCR_MESSAGES:
-                if (c == ';') sMsgScroll = min(sMsgScroll + 1, sMsgStops - 1);
-                else if (c == '.') sMsgScroll = max(0, sMsgScroll - 1);
-                else if (c == '`') { sScreen = SCR_CHATS; pollChats(true); }
+                if (c == ';') sUi.msgScroll = min(sUi.msgScroll + 1, sUi.msgStops - 1);
+                else if (c == '.') sUi.msgScroll = max(0, sUi.msgScroll - 1);
+                else if (c == '`') { sUi.screen = SCR_CHATS; pollChats(true); }
                 break;
             case SCR_INFO:
-                if (c == '`') sScreen = SCR_CHATS;
+                if (c == '`') sUi.screen = SCR_CHATS;
                 else if (c == 'p')
-                    sStatus = netEnqueue(NET_PING) ? T(S_TESTING_SERVER) : T(S_BUSY_RETRY);
-                else if (c == 's') { sScreen = SCR_SETTINGS; sSetSel = 0; sStatus = ""; }
+                    sUi.status = netEnqueue(NET_PING) ? T(S_TESTING_SERVER) : T(S_BUSY_RETRY);
+                else if (c == 's') { sUi.screen = SCR_SETTINGS; sUi.setSel = 0; sUi.status = ""; }
                 break;
             case SCR_SETTINGS:
                 // ; / . parcourent les champs, , et / changent la valeur.
-                if (c == ';' && sSetSel > 0) sSetSel--;
-                else if (c == '.' && sSetSel < (int)SET_COUNT - 1) sSetSel++;
-                else if (c == ',') setAdjust(sSetSel, -1);
-                else if (c == '/') setAdjust(sSetSel, +1);
+                if (c == ';' && sUi.setSel > 0) sUi.setSel--;
+                else if (c == '.' && sUi.setSel < (int)SET_COUNT - 1) sUi.setSel++;
+                else if (c == ',') setAdjust(sUi.setSel, -1);
+                else if (c == '/') setAdjust(sUi.setSel, +1);
                 else if (c == '`') {
                     // Enregistrement à la sortie : une écriture NVS par visite,
                     // pas une par appui de touche (usure).
                     if (sSetDirty) {
                         gConfig.save();
                         sSetDirty = false;
-                        sStatus = T(S_SAVED);
+                        sUi.status = T(S_SAVED);
                     }
-                    sScreen = SCR_INFO;
+                    sUi.screen = SCR_INFO;
                 }
                 break;
             default: break;
         }
     }
     if (ks.enter) {
-        if (sScreen == SCR_CHATS) { if (!sCalibrating) openChat(sChatSel); }
-        else if (sScreen == SCR_MESSAGES) { sScreen = SCR_COMPOSE; sStatusView = ""; }
+        if (sUi.screen == SCR_CHATS) { if (!sUi.calibrating) openChat(sUi.chatSel); }
+        else if (sUi.screen == SCR_MESSAGES) { sUi.screen = SCR_COMPOSE; sUi.statusView = ""; }
     }
 }
 
@@ -1692,7 +1009,7 @@ void setup() {
 
     if (!gConfig.hasWifi()) {
         ConfigPortal::startAP();
-        sScreen = SCR_SETUP;
+        sUi.screen = SCR_SETUP;
         render();
         return;
     }
@@ -1706,8 +1023,8 @@ void setup() {
 
     if (WiFi.status() != WL_CONNECTED) {
         ConfigPortal::startAP();
-        sScreen = SCR_SETUP;
-        sStatus = T(S_WIFI_NOT_FOUND);
+        sUi.screen = SCR_SETUP;
+        sUi.status = T(S_WIFI_NOT_FOUND);
         render();
         return;
     }
@@ -1716,13 +1033,13 @@ void setup() {
     ConfigPortal::startSTA();
 
     if (!gConfig.hasServer()) {
-        sScreen = SCR_INFO;
-        sStatus = String(T(S_SERVER_NOT_CONFIGURED)) + WiFi.localIP().toString();
+        sUi.screen = SCR_INFO;
+        sUi.status = String(T(S_SERVER_NOT_CONFIGURED)) + WiFi.localIP().toString();
         render();
         return;
     }
 
-    sScreen = SCR_CHATS;
+    sUi.screen = SCR_CHATS;
     // storeLoad() renseigne sMarker : l'âge se juge après.
     bool haveList = storeLoad();
     // Au-delà de 7 jours de retard, le rattrapage incrémental serait plus
@@ -1732,10 +1049,10 @@ void setup() {
                   ((int64_t)nowSec * 1000 - sMarker) > 7LL * 86400000LL;
     if (haveList && !tooOld) {
         // Liste immédiate depuis la NVS ; le premier poll fait le rattrapage.
-        sStatus = T(S_UPDATING);
+        sUi.status = T(S_UPDATING);
         netEnqueue(NET_POLL);
     } else {
-        sStatus = T(S_CALIBRATING);
+        sUi.status = T(S_CALIBRATING);
         requestCalibration();
     }
     render();
@@ -1756,7 +1073,7 @@ void loop() {
         // Le poll global tourne sur tous les écrans : il entretient la liste,
         // le marqueur et les bips. La conversation ouverte se rafraîchit en plus.
         pollChats();
-        if (sScreen == SCR_MESSAGES || sScreen == SCR_COMPOSE) pollMessages();
+        if (sUi.screen == SCR_MESSAGES || sUi.screen == SCR_COMPOSE) pollMessages();
     }
 
     // Persistance du marqueur au plus toutes les 5 minutes (usure NVS).
@@ -1772,7 +1089,7 @@ void loop() {
         sNewIncoming = false;
         // Un message arrivé ailleurs se signale plus franchement qu'un
         // message de la conversation qu'on a sous les yeux.
-        Snd::play((sScreen == SCR_MESSAGES || sScreen == SCR_COMPOSE) ? Snd::RECEIVED
+        Snd::play((sUi.screen == SCR_MESSAGES || sUi.screen == SCR_COMPOSE) ? Snd::RECEIVED
                                                                       : Snd::NOTIF);
     }
     if (sSendFailed) {
@@ -1782,8 +1099,8 @@ void loop() {
         // conversation visée — sinon il serait réexpédié au mauvais
         // destinataire à la frappe suivante.
         if (sCurChatGuid == sSendBackupGuid) {
-            sCompose = sSendBackup;
-            sScreen = SCR_COMPOSE;
+            sUi.compose = sSendBackup;
+            sUi.screen = SCR_COMPOSE;
         }
         sSendBackup = "";
         sSendBackupGuid = "";

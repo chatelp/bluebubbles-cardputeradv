@@ -161,6 +161,25 @@ envoi), endpoint /debug/conv, STORE_VER 3 (recalibration auto).
       (clavier ignoré) ; plein écran conservé pour la synchro initiale —
       validé sur l'appareil (doublon absorbé, interruption sans perte)
 
+## v0.13 — Modularisation et simulateur (2026-08-16) — flashé
+
+- [x] **Fin du monolithe** : le rendu sort de main.cpp vers `src/ui/`
+      (display.h / theme.h / model.h / render.cpp). Le rendu ne lit qu'un
+      `UiModel` rempli sous verrou — plus aucun accès matériel, réseau ou NVS
+      dans le dessin. main.cpp : 1794 → ~1100 lignes (état, réseau, NVS,
+      clavier)
+- [x] **Simulateur SDL macOS** (`pio run -e sim`, patron Geek Casino) :
+      LovyanGFX + Panel_sdl, rendu au pixel identique (même API lgfx, même
+      efont), fenêtre interactive ×3 ou captures BMP sans fenêtre
+      (`--screens <dir> [--lang fr]`). Shim Arduino hôte minimal
+      (`src/sim_compat/Arduino.h`)
+- [x] **Jeu de données de démonstration** (contacts inventés, FR/EN,
+      émojis + tapbacks) : les captures ne peuvent pas contenir de donnée
+      personnelle — pas de floutage à faire, jamais
+- [x] Premiers fruits : trois défauts vus et corrigés à la première capture
+      (double « moi : », barre d'aide FR tronquée, écran Setup non traduit)
+- [x] Le firmware compile inchangé, 34 tests natifs verts, flashé et validé
+
 ## v0.12 — Bilingue et réglages sur l'appareil (2026-08-16) — flashé
 
 - [x] **Interface bilingue EN/FR, anglais par défaut** (docs/01) : table
