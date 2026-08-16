@@ -50,12 +50,16 @@ static String htmlPage() {
            "legend{font-size:11px;text-transform:uppercase;letter-spacing:.1em;"
            "color:var(--acc);padding:0 7px;font-weight:600}"
            "label{display:block;margin:13px 0 5px;font-size:13px;color:var(--dim)}"
-           "input,select{width:100%;padding:10px 11px;border-radius:9px;font-size:15px;"
+           // Le reset d'apparence ne vaut QUE pour les champs texte : sur
+           // Safari iOS, appearance:none sur une case à cocher la vide de sa
+           // coche et casse le curseur de volume (constat PO sur téléphone).
+           "input:not([type=checkbox]):not([type=range]),select{width:100%;"
+           "padding:10px 11px;border-radius:9px;font-size:15px;"
            "border:1px solid var(--line);background:var(--sur2);color:var(--fg);"
            "-webkit-appearance:none;appearance:none}"
            "input:focus,select:focus{outline:0;border-color:var(--acc);"
            "box-shadow:0 0 0 3px rgba(77,163,255,.18)}"
-           "input[type=range]{padding:0;height:26px;background:transparent;border:0;"
+           "input[type=range]{width:100%;padding:0;height:26px;background:transparent;border:0;"
            "accent-color:var(--acc2)}"
            "input[type=range]:focus{box-shadow:none}"
            "select{background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'"
