@@ -65,6 +65,7 @@ int64_t demoNow() {
     struct tm t = {};
     t.tm_year = 2026 - 1900; t.tm_mon = 7; t.tm_mday = 16;
     t.tm_hour = 18; t.tm_min = 42;
+    t.tm_isdst = -1;  // laisse mktime trancher l'heure d'été
     return (int64_t)mktime(&t) * 1000;
 }
 

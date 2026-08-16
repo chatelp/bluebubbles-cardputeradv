@@ -133,47 +133,99 @@ static String timeShort(int64_t msEpoch) {
     return buf;
 }
 
+// Étiquette machine : capitales ASCII (Font0 n'a pas d'accents) — É→E.
+// Réservé aux textes « appareil » : titres de barres, QUI/QUAND, compteurs.
+static String upperLabel(const String& s) {
+    String o;
+    o.reserve(s.length());
+    for (size_t i = 0; i < s.length(); i++) {
+        uint8_t c = s[i];
+        if (c < 0x80) {
+            o += (char)((c >= 'a' && c <= 'z') ? c - 32 : c);
+            continue;
+        }
+        if (c == 0xC3 && i + 1 < s.length()) {
+            uint8_t d = (uint8_t)s[i + 1] | 0x20;  // plie majuscules/minuscules
+            i++;
+            char r = 0;
+            if (d >= 0xA0 && d <= 0xA5) r = 'A';
+            else if (d == 0xA7) r = 'C';
+            else if (d >= 0xA8 && d <= 0xAB) r = 'E';
+            else if (d >= 0xAC && d <= 0xAF) r = 'I';
+            else if (d == 0xB1) r = 'N';
+            else if (d >= 0xB2 && d <= 0xB6) r = 'O';
+            else if (d >= 0xB9 && d <= 0xBC) r = 'U';
+            if (r) o += r;
+        } else {  // émoji ou autre : pas sa place dans une étiquette machine
+            int n = (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 2;
+            i += (size_t)n - 1;
+        }
+    }
+    return o;
+}
+
+// Panneau biseauté : arête claire en haut, sombre en bas — c'est lui qui
+// fait « appareil » plutôt qu'« application ».
+static void drawBevelPanel(int x, int y, int w, int h) {
+    C->fillRect(x, y, w, h, C_PANEL);
+    C->drawFastHLine(x, y, w, C_EDGE_L);
+    C->drawFastHLine(x, y + h - 1, w, C_EDGE_D);
+}
+
 static void drawTopBar(const String& title) {
-    C->fillRect(0, 0, SCREEN_W, BAR_H, C_INK800);
-    C->setTextColor(C_BLUE400, C_INK800);
-    C->setCursor(5, 2);
-    C->print(fitText(title, 168));
+    drawBevelPanel(0, 0, SCREEN_W, BAR_H);
 
+    // LED : rouge hors ligne, ambre s'il reste du non-lu, bleue au repos.
+    bool unread = false;
+    for (const BBChat& c : M->chats) {
+        auto it = M->seen.find(c.key);
+        if (c.lastDate > 0 && !c.lastFromMe &&
+            (it == M->seen.end() || c.lastDate > it->second)) { unread = true; break; }
+    }
+    uint16_t led = !M->wifiOk ? C_RED400 : (unread ? C_AMBER400 : C_BLUE500);
+    C->fillCircle(9, 8, 3, led);
+    C->drawCircle(9, 8, 4, C_EDGE_D);
+
+    C->setTextColor(C_WHITE, C_PANEL);
+    C->setCursor(20, 2);
+    C->print(fitText(upperLabel(title), 148));
+
+    // À droite, des instruments DESSINÉS : % batterie (Font0), barres de
+    // signal (échelle en creux toujours visible), pile avec son remplissage.
     int batt = M->battery;
-    String right = String(batt) + "%";
-    C->setTextColor(batt < 20 ? C_RED400 : C_SLATE300, C_INK800);
-    C->setCursor(SCREEN_W - C->textWidth(right) - 5, 2);
-    C->print(right);
+    C->drawRect(216, 4, 18, 9, C_SLATE300);
+    C->fillRect(234, 6, 2, 5, C_SLATE300);
+    int fw = (14 * batt) / 100;
+    if (fw > 0) C->fillRect(218, 6, fw, 5, batt < 20 ? C_RED400 : C_SLATE300);
 
-    // Point d'état réseau : bleu quand la synchro est fraîche, ambre pendant
-    // le rattrapage, rouge hors ligne. Trois pixels valent une phrase.
-    uint16_t dot = !M->wifiOk ? C_RED400 : (M->synced ? C_BLUE400 : C_AMBER400);
-    int dotX = SCREEN_W - C->textWidth(right) - 12;
-    C->fillCircle(dotX, 8, 2, dot);
-
-    // Barres de signal type téléphone : 0-4 selon le RSSI (seuils WiFi usuels).
-    // Une barre « éteinte » reste dessinée en creux : l'échelle se lit d'un
-    // coup d'œil, même signal faible.
     int bars = !M->wifiOk           ? 0
                : (M->rssi >= -55)   ? 4
                : (M->rssi >= -65)   ? 3
                : (M->rssi >= -75)   ? 2
                : (M->rssi >= -85)   ? 1 : 0;
-    int bx = dotX - 18;
     for (int b = 0; b < 4; b++) {
         int h = 3 + b * 2;                       // 3, 5, 7, 9 px
         uint16_t col = b < bars ? C_SLATE300 : C_INK600;
-        C->fillRect(bx + b * 3, 12 - h, 2, h, col);
+        C->fillRect(196 + b * 4, 12 - h, 2, h, col);
     }
+
+    C->setFont(&fonts::Font0);
+    String pct = String(batt) + "%";
+    C->setTextColor(batt < 20 ? C_RED400 : C_SLATE300, C_PANEL);
+    C->setCursor(192 - C->textWidth(pct), 5);
+    C->print(pct);
+    C->setFont(&fonts::efontJA_12);
 }
 
 // Barre d'aide : les raccourcis, toujours au même endroit.
-static void drawHintBar(const String& hint) {
+static void drawHintBar(const String& hint, int rightReserve = 0) {
     int y = SCREEN_H - HINT_H;
-    C->fillRect(0, y, SCREEN_W, HINT_H, C_INK800);
-    C->setTextColor(C_SLATE300, C_INK800);
-    C->setCursor(5, y + 1);
-    C->print(fitText(hint, SCREEN_W - 10));
+    drawBevelPanel(0, y, SCREEN_W, HINT_H);
+    C->setFont(&fonts::Font0);
+    C->setTextColor(C_SLATE300, C_PANEL);
+    C->setCursor(5, y + 3);
+    C->print(fitText(upperLabel(hint), SCREEN_W - 10 - rightReserve));
+    C->setFont(&fonts::efontJA_12);
 }
 
 // Bandeau d'erreur : il recouvre la barre d'aide, jamais le contenu — la
@@ -190,9 +242,9 @@ static void drawStatusLine(const String& st) {
     for (const char* k : kErr)
         if (st.indexOf(k) >= 0) { err = true; break; }
     uint16_t col = err ? C_RED400 : (st.indexOf("OK") >= 0 ? C_GREEN400 : C_SLATE300);
-    C->fillRect(0, y, SCREEN_W, HINT_H, C_INK800);
+    drawBevelPanel(0, y, SCREEN_W, HINT_H);
     C->fillRect(0, y, 2, HINT_H, col);
-    C->setTextColor(col, C_INK800);
+    C->setTextColor(col, C_PANEL);
     C->setCursor(7, y + 1);
     C->print(fitText(st, SCREEN_W - 12));
 }
@@ -260,7 +312,7 @@ static void drawSplash() {
     int total = C->textWidth(labels[0]) + C->textWidth(labels[1]) + C->textWidth(labels[2]) + 2 * 14;
     int x = (SCREEN_W - total) / 2;
     for (int i = 0; i < 3; i++) {
-        uint16_t col = done[i] ? C_BLUE400 : (i == cur ? C_WHITE : C_SLATE300);
+        uint16_t col = done[i] ? C_AMBER400 : (i == cur ? C_WHITE : C_SLATE300);
         C->setTextColor(col, C_INK900);
         C->setCursor(x, 78);
         C->print(labels[i]);
@@ -278,7 +330,7 @@ static void drawSplash() {
         C->fillRoundRect(50, 98, 140, 5, 2, C_INK700);
         int tot = M->calibTotal ? M->calibTotal : 1;
         int w = 140 * min((int)M->calibPage, tot) / tot;
-        if (w > 0) C->fillRoundRect(50, 98, w, 5, 2, C_BLUE400);
+        if (w > 0) C->fillRoundRect(50, 98, w, 5, 2, C_AMBER400);
         String p = String(T(S_PAGE)) + " " + (int)M->calibPage + " / " + tot;
         C->setTextColor(C_SLATE300, C_INK900);
         C->setCursor((SCREEN_W - C->textWidth(p)) / 2, 106);
@@ -309,7 +361,7 @@ static void drawCalibrating() {
     C->fillRoundRect(50, 82, 140, 5, 2, C_INK700);
     int done = M->calibPage, total = M->calibTotal ? M->calibTotal : 1;
     int w = 140 * min(done, total) / total;
-    if (w > 0) C->fillRoundRect(50, 82, w, 5, 2, C_BLUE400);
+    if (w > 0) C->fillRoundRect(50, 82, w, 5, 2, C_AMBER400);
 
     String p = String(T(S_PAGE)) + " " + done + " / " + total;
     C->setCursor((SCREEN_W - C->textWidth(p)) / 2, 94);
@@ -324,8 +376,9 @@ static void drawCalibrating() {
 static void drawCalibModal() {
     const int w = 184, h = 56;
     const int x = (SCREEN_W - w) / 2, y = 36;
-    C->fillRoundRect(x, y, w, h, 5, C_INK800);
-    C->drawRoundRect(x, y, w, h, 5, C_BLUE400);
+    C->fillRoundRect(x + 1, y + 2, w, h, 5, C_SHADOW);
+    C->fillRoundRect(x, y, w, h, 5, C_PANEL);
+    C->drawRoundRect(x, y, w, h, 5, C_EDGE_L);
 
     C->setTextColor(C_BLUE400, C_INK800);
     String t = T(S_CALIBRATION);
@@ -336,7 +389,7 @@ static void drawCalibModal() {
     int done = min((int)M->calibPage, total);
     C->fillRoundRect(x + 22, y + 27, w - 44, 5, 2, C_INK600);
     int bw = (w - 44) * done / total;
-    if (bw > 0) C->fillRoundRect(x + 22, y + 27, bw, 5, 2, C_BLUE400);
+    if (bw > 0) C->fillRoundRect(x + 22, y + 27, bw, 5, 2, C_AMBER400);
 
     C->setTextColor(C_SLATE300, C_INK800);
     String p = String(T(S_PAGE)) + " " + done + " / " + total;
@@ -378,28 +431,54 @@ static void drawChats() {
             nx = 15;
         }
         String ts = timeShort(c.lastDate);
-        drawRich(nx, y + 2, fitText(c.title, SCREEN_W - nx - C->textWidth(ts) - 12),
+        C->setFont(&fonts::Font0);
+        int tsW = C->textWidth(ts);
+        C->setFont(&fonts::efontJA_12);
+        drawRich(nx, y + 2, fitText(c.title, SCREEN_W - nx - tsW - 12),
                  unread ? C_WHITE : C_SLATE200, bg);
 
+        C->setFont(&fonts::Font0);
         C->setTextColor(C_SLATE300, bg);
-        C->setCursor(SCREEN_W - C->textWidth(ts) - 5, y + 2);
+        C->setCursor(SCREEN_W - tsW - 5, y + 4);
         C->print(ts);
+        C->setFont(&fonts::efontJA_12);
 
         String preview = (c.lastFromMe ? String(T(S_ME_PREFIX)) : String("")) + c.lastText;
         preview.replace("\n", " ");
         drawRich(nx, y + 14, fitText(preview, SCREEN_W - nx - 6), C_SLATE300, bg);
 
         if (i < visible - 1 && idx + 1 < (int)M->chats.size() && !sel)
-            C->drawFastHLine(EDGE, y + rowH - 1, SCREEN_W - EDGE * 2, C_INK700);
+            C->drawFastHLine(EDGE, y + rowH - 1, SCREEN_W - EDGE * 2, C_EDGE_D);
     }
-    drawHintBar(T(S_HINT_CHATS));
+    // Compteur machine, en ambre, à droite de la barre d'aide — qui lui
+    // réserve sa place au lieu de le chevaucher.
+    int newCount = 0;
+    for (const BBChat& c : M->chats) {
+        auto it = M->seen.find(c.key);
+        if (c.lastDate > 0 && !c.lastFromMe &&
+            (it == M->seen.end() || c.lastDate > it->second)) newCount++;
+    }
+    String n = String(T(S_NEW_COUNT)) + newCount;
+    C->setFont(&fonts::Font0);
+    int nW = C->textWidth(n);
+    C->setFont(&fonts::efontJA_12);
+    drawHintBar(T(S_HINT_CHATS), newCount > 0 ? nW + 8 : 0);
+    if (newCount > 0 && !M->status.length()) {
+        C->setFont(&fonts::Font0);
+        C->setTextColor(C_AMBER400, C_PANEL);
+        C->setCursor(SCREEN_W - nW - 5, SCREEN_H - HINT_H + 3);
+        C->print(n);
+        C->setFont(&fonts::efontJA_12);
+    }
     drawStatusLine(M->status);
 }
 
 // Une bulle : rectangle arrondi + ergot de 3 px sur le coin bas extérieur.
 // C'est l'ergot qui fait « messagerie » plutôt que « liste ».
 static void drawBubble(int x, int y, int w, int h, bool sent, uint16_t fill) {
+    C->fillRoundRect(x + 1, y + 2, w, h, BUB_R, C_SHADOW);  // ombre portée
     C->fillRoundRect(x, y, w, h, BUB_R, fill);
+    C->drawFastHLine(x + BUB_R, y + 1, w - BUB_R * 2, sent ? C_HI_SENT : C_HI_RECV);
     if (sent) {
         C->fillTriangle(x + w - BUB_R, y + h - 1, x + w + BUB_TAIL - 1, y + h - 1,
                              x + w - 1, y + h - 5, fill);
@@ -439,6 +518,7 @@ static void drawTapBadge(int bx, int bw, int y, bool sent, const uint8_t* taps) 
     int x = sent ? bx - w + 12 : bx + bw - 12;
     x = max(2, min(x, SCREEN_W - 2 - w));
 
+    C->fillRoundRect(x + 1, y + 1, w, TAP_H, TAP_H / 2, C_SHADOW);
     C->fillRoundRect(x, y, w, TAP_H, TAP_H / 2, C_INK800);
     C->drawRoundRect(x, y, w, TAP_H, TAP_H / 2, C_INK600);
     int cx = x + 4;
@@ -486,21 +566,19 @@ static void drawMessages(bool composeMode) {
     bool first = true;
 
     for (const BBMsg& m : M->msgs) {
-        // Séparateur temporel centré au-delà d'un quart d'heure de silence —
-        // moins coûteux qu'un horodatage dans chaque bulle (design/geometry).
-        if (!first && m.date && prevDate && m.date - prevDate > 15 * 60000LL) {
-            Block s;
-            s.separator = true;
-            s.sepText = timeShort(m.date);
-            s.h = 12;
-            blocks.push_back(s);
-        }
-        // Dans un groupe, l'alignement ne dit que « pas moi » : le nom de
-        // l'expéditeur s'affiche au changement de voix (comme l'app officielle).
-        if (isGroup && !m.fromMe && m.sender.length() && m.sender != prevSender) {
+        // Étiquette machine « QUI HH:MM » (direction D) : une seule mécanique
+        // remplace le séparateur horaire ET l'en-tête d'expéditeur — posée au
+        // changement de voix, ou après un quart d'heure de silence.
+        bool voiceChange = first || m.fromMe != prevFromMe ||
+                           (isGroup && !m.fromMe && m.sender != prevSender);
+        bool longGap = !first && m.date && prevDate && m.date - prevDate > 15 * 60000LL;
+        if (voiceChange || longGap) {
             Block h;
             h.senderHdr = true;
-            h.sepText = m.sender;
+            h.sent = m.fromMe;  // aligne l'étiquette du côté de sa bulle
+            String who = m.fromMe ? String(T(S_ME_CAPS))
+                                  : (isGroup && m.sender.length() ? m.sender : M->curChatTitle);
+            h.sepText = upperLabel(who) + " " + timeShort(m.date);
             h.h = 11;
             blocks.push_back(h);
         }
@@ -570,14 +648,14 @@ static void drawMessages(bool composeMode) {
         int by = y + b.pad;
         if (by + bodyH < areaTop) break;
 
-        if (b.separator) {
-            C->setTextColor(C_SLATE300, C_INK900);
-            C->setCursor((SCREEN_W - C->textWidth(b.sepText)) / 2, y + 1);
-            C->print(b.sepText);
-            continue;
-        }
         if (b.senderHdr) {
-            drawRich(EDGE + 2, y, fitText(b.sepText, BUB_MAXW), C_SLATE300, C_INK900);
+            C->setFont(&fonts::Font0);
+            String lbl = fitText(b.sepText, BUB_MAXW);
+            int lx = b.sent ? SCREEN_W - EDGE - C->textWidth(lbl) : EDGE + 1;
+            C->setTextColor(C_SLATE300, C_INK900);
+            C->setCursor(lx, y + 2);
+            C->print(lbl);
+            C->setFont(&fonts::efontJA_12);
             continue;
         }
         int x = b.sent ? SCREEN_W - EDGE - b.w : EDGE;
@@ -634,9 +712,11 @@ static void drawInfo() {
     drawTopBar(T(S_INFO));
     int y = BAR_H + 4;
     auto row = [&](const String& k, const String& v, uint16_t col = C_WHITE) {
+        C->setFont(&fonts::Font0);
         C->setTextColor(C_SLATE300, C_INK900);
-        C->setCursor(6, y);
-        C->print(k);
+        C->setCursor(6, y + 3);
+        C->print(upperLabel(k));
+        C->setFont(&fonts::efontJA_12);
         C->setTextColor(col, C_INK900);
         C->setCursor(78, y);
         C->print(fitText(v, SCREEN_W - 84));
@@ -699,9 +779,11 @@ static void drawSettings() {
             C->fillRect(0, y - 1, 2, rowH, C_BLUE400);
         }
         uint16_t bg = sel ? C_INK600 : C_INK900;
+        C->setFont(&fonts::Font0);
         C->setTextColor(sel ? C_WHITE : C_SLATE300, bg);
-        C->setCursor(7, y);
-        C->print(T(setLabel(i)));
+        C->setCursor(7, y + 3);
+        C->print(upperLabel(T(setLabel(i))));
+        C->setFont(&fonts::efontJA_12);
         C->setTextColor(sel ? C_BLUE400 : C_SLATE200, bg);
         String v = setValueText(i);
         C->setCursor(SCREEN_W - 7 - C->textWidth(v), y);

@@ -161,6 +161,22 @@ envoi), endpoint /debug/conv, STORE_VER 3 (recalibration auto).
       (clavier ignoré) ; plein écran conservé pour la synchro initiale —
       validé sur l'appareil (doublon absorbé, interruption sans perte)
 
+## v0.14 — Direction visuelle « D » (2026-08-16) — flashé
+
+Actée par le PO après maquettes comparatives au simulateur (A matière /
+B rétro-communicateur / C terminal / D hybride) : **le chrome d'appareil de
+B, la matière de bulles de A** — l'appareil parle ambre, les gens parlent
+bleu (docs/05, règle 2 révisée).
+
+- [x] Barres biseautées, LED d'état, titre en capitales, %, signal et pile
+      dessinés ; barre d'aide en capitales bitmap + compteur NOUVEAU ambre
+- [x] Étiquettes machine « QUI HH:MM » alignées côté locuteur — remplacent
+      séparateurs horaires ET en-têtes d'expéditeur de groupe
+- [x] Bulles en matière : ombre portée, lueur haute, rayon 6 ; pilule de
+      réactions ombrée ; progressions en ambre (splash, calibration, modal)
+- [x] Écrans Infos et Réglages en libellés machine ; tout décliné sur les
+      10 écrans, vérifié au simulateur avant flash
+
 ## v0.13 — Modularisation et simulateur (2026-08-16) — flashé
 
 - [x] **Splash screen** : logo bulle « en train d'écrire » (points animés),

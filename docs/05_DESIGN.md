@@ -13,12 +13,21 @@ D'où trois règles fermes :
 
 1. **L'alignement porte le sens.** À gauche l'autre, à droite soi. La
    couleur confirme, elle ne répète pas.
-2. **Un seul accent coloré à la fois.** Ambre (non lu), rouge (erreur),
-   vert (confirmation) ne coexistent jamais : deux signaux simultanés n'en
-   font plus aucun.
+2. **Deux voix de couleur** (direction « D », actée PO 2026-08-16) :
+   **l'appareil parle ambre** — LED, compteurs, barres de progression,
+   étiquettes machine en capitales bitmap — et **les gens parlent bleu** —
+   les bulles. Jamais les deux sur le même élément. Rouge reste l'erreur,
+   vert la confirmation ponctuelle.
 3. **Les trois bandes sont fixes** d'un écran à l'autre — barre supérieure
    16 px, contenu 106 px, barre d'aide 13 px : l'utilisateur sait toujours
-   où regarder.
+   où regarder. Les barres sont des **panneaux biseautés** (arête claire en
+   haut, sombre en bas) : c'est le biseau qui fait « appareil » plutôt
+   qu'« application ». En haut : LED d'état (rouge hors ligne, ambre non-lu,
+   bleue au repos), titre en capitales, %, signal et pile **dessinés**.
+   Étiquettes « QUI HH:MM » (Font0, capitales, alignées côté locuteur) :
+   une seule mécanique remplace séparateurs horaires et en-têtes
+   d'expéditeur. Bulles en **matière** : ombre portée 1×2 px, lueur en haut,
+   rayon 6.
 
 ## Palette (RGB565, valeurs affichées après quantification)
 

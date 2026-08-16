@@ -17,6 +17,15 @@ static const uint16_t C_GREEN400 = 0x3631;
 static const uint16_t C_AMBER400 = 0xFD84;  // pastille non lu
 static const uint16_t C_RED400   = 0xFACB;  // erreur
 
+// Direction « D » actée par le PO (2026-08-16) : l'appareil parle AMBRE
+// (LED, compteurs, progression, accusés), les gens parlent BLEU (bulles).
+static const uint16_t C_PANEL    = 0x1926;  // panneau biseauté (barres)
+static const uint16_t C_EDGE_L   = 0x3A8C;  // arête claire du biseau
+static const uint16_t C_EDGE_D   = 0x0862;  // arête sombre, filets
+static const uint16_t C_SHADOW   = 0x0041;  // ombre portée des bulles
+static const uint16_t C_HI_SENT  = 0x449F;  // lueur haute, bulle envoyée
+static const uint16_t C_HI_RECV  = 0x2189;  // lueur haute, bulle reçue
+
 static const int SCREEN_W = 240;
 static const int SCREEN_H = 135;
 static const int BAR_H  = 16;      // barre supérieure
@@ -25,7 +34,7 @@ static const int HINT_H = 13;      // barre d'aide
 static const int BUB_MAXW  = 176;  // 73 % de l'écran
 static const int BUB_PADX  = 4;
 static const int BUB_PADY  = 3;
-static const int BUB_R     = 5;
+static const int BUB_R     = 6;
 static const int BUB_TAIL  = 3;
 static const int LINE_H    = 13;
 static const int GAP_SAME  = 3;    // même auteur
