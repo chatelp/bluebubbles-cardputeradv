@@ -26,6 +26,8 @@
 #include "i18n.h"
 #include "ui/render.h"
 #include "ui/theme.h"
+#include "bb_emoji.h"
+#include "emoji_art.h"
 
 // Globals que le firmware définit ailleurs (app_config.cpp, non compilé ici).
 AppConfig gConfig;
@@ -204,6 +206,146 @@ int runScreens(const std::string& dir) {
     return 0;
 }
 
+
+// ---------------------------------------------------------- maquettes UI
+// Trois directions pour l'identité visuelle (décision PO en cours), rendues
+// par le vrai moteur (efont, 240×135) sur l'écran de conversation. Ce sont
+// des ESQUISSES : le code n'a pas vocation à être propre, mais à montrer.
+namespace mock {
+
+void emoji(lgfx::LGFX_Sprite& g, int x, int y, uint32_t cp) {
+    int gi = bbEmojiGlyph(cp);
+    if (gi < 0) return;
+    const uint8_t* art = kEmojiArt[gi];
+    for (int dy = 0; dy < kEmojiPx; dy++)
+        for (int dx = 0; dx < kEmojiPx; dx++) {
+            uint8_t v = art[dy * kEmojiPx + dx];
+            if (v) g.drawPixel(x + dx, y + dy, kEmojiPalette[v]);
+        }
+}
+
+// A — « Matière et profondeur » : encre et bulle poussé à fond.
+void matiere(lgfx::LGFX_Sprite& g) {
+    g.fillSprite(C_INK900);
+    // Barre : titre + filet dégradé bleu, pastille d'état avec halo.
+    g.fillRect(0, 0, 240, 16, C_INK800);
+    g.setTextColor(C_WHITE, C_INK800);
+    g.setCursor(6, 2); g.print("Camille");
+    for (int i = 0; i < 60; i++)
+        g.drawPixel(6 + i, 14, i < 42 ? C_BLUE400 : C_INK700);
+    g.fillCircle(222, 8, 3, C_BLUE500); g.drawCircle(222, 8, 4, C_INK600);
+    g.setTextColor(C_SLATE300, C_INK800); g.setCursor(196, 2); g.print("84");
+
+    auto bubble = [&](int x, int y, int w, int h, bool sent) {
+        g.fillRoundRect(x + 1, y + 2, w, h, 7, 0x0041);          // ombre portée
+        uint16_t fill = sent ? C_BLUE500 : C_INK700;
+        g.fillRoundRect(x, y, w, h, 7, fill);
+        uint16_t hi = sent ? 0x449F : 0x2189;                     // lueur haute
+        g.drawFastHLine(x + 6, y + 1, w - 12, hi);
+        if (sent) g.fillTriangle(x + w - 5, y + h - 1, x + w + 2, y + h - 1, x + w - 1, y + h - 6, fill);
+        else g.fillTriangle(x + 5, y + h - 1, x - 2, y + h - 1, x + 1, y + h - 6, fill);
+    };
+    g.setTextColor(C_SLATE300, C_INK900);
+    g.setCursor(102, 20); g.print("18:20");
+    bubble(6, 32, 152, 19, false);
+    g.setTextColor(C_WHITE, C_INK700); g.setCursor(11, 35); g.print("Raison de plus pour venir !");
+    bubble(78, 60, 156, 19, true);
+    g.setTextColor(C_WHITE, C_BLUE500); g.setCursor(83, 63); g.print("Ok je passe vers 19h30 ");
+    emoji(g, 83 + 138, 63, 0x1F377);
+    // pilule de réactions, ombrée elle aussi
+    g.fillRoundRect(69, 53, 34, 15, 7, 0x0041);
+    g.fillRoundRect(68, 52, 34, 15, 7, C_INK800);
+    g.drawRoundRect(68, 52, 34, 15, 7, C_INK600);
+    emoji(g, 72, 54, 0x2764);
+    g.setTextColor(C_SLATE300, C_INK800); g.setCursor(86, 54); g.print("x2");
+    bubble(6, 88, 168, 19, false);
+    g.setTextColor(C_WHITE, C_INK700); g.setCursor(11, 91); g.print("On dit 20h au Vieux Port ? ");
+    emoji(g, 11 + 156, 91, 0x1F389);
+    g.fillRect(0, 122, 240, 13, C_INK800);
+    g.setTextColor(C_SLATE300, C_INK800); g.setCursor(5, 123); g.print(";. defiler  OK ecrire  ` retour");
+}
+
+// B — « Rétro-communicateur » : pager/BlackBerry, chrome d'appareil.
+void retro(lgfx::LGFX_Sprite& g) {
+    const uint16_t BG = 0x10E4, PANEL = 0x2189, EDGE_L = 0x4B0D, EDGE_D = 0x0862;
+    const uint16_t TXT = 0xC618, BRIGHT = 0xFFFF, ACC = 0xFD84;  // ambre
+    g.fillSprite(BG);
+    // Barre biseautée + antenne/signal + batterie dessinée
+    g.fillRect(0, 0, 240, 17, PANEL);
+    g.drawFastHLine(0, 0, 240, EDGE_L); g.drawFastHLine(0, 16, 240, EDGE_D);
+    g.setTextColor(BRIGHT, PANEL); g.setCursor(24, 2); g.print("CAMILLE");
+    g.fillCircle(10, 8, 3, ACC);  // LED message
+    for (int b = 0; b < 4; b++) g.fillRect(176 + b * 5, 11 - b * 2, 3, 3 + b * 2, b < 3 ? TXT : EDGE_D);
+    g.drawRect(206, 4, 22, 9, TXT); g.fillRect(228, 6, 2, 5, TXT); g.fillRect(208, 6, 14, 5, ACC);
+    auto panel = [&](int x, int y, int w, int h, bool sent) {
+        g.fillRect(x, y, w, h, sent ? 0x21A9 : PANEL);
+        g.drawRect(x, y, w, h, sent ? ACC : EDGE_L);
+        g.drawFastVLine(x, y, h, sent ? ACC : EDGE_L);
+    };
+    g.setTextColor(ACC, BG); g.setCursor(6, 21); g.print("CAMILLE  18:20");
+    panel(6, 32, 170, 17, false);
+    g.setTextColor(BRIGHT, PANEL); g.setCursor(11, 34); g.print("Raison de plus pour venir !");
+    g.setTextColor(ACC, BG); g.setCursor(155, 53); g.print("MOI  18:36");
+    panel(64, 64, 170, 17, true);
+    g.setTextColor(BRIGHT, 0x21A9); g.setCursor(69, 66); g.print("Ok je passe vers 19h30 ");
+    emoji(g, 69 + 138, 66, 0x1F377);
+    g.setTextColor(TXT, BG); g.setCursor(64, 83); g.print("[");
+    emoji(g, 71, 82, 0x2764);
+    g.setTextColor(TXT, BG); g.setCursor(84, 83); g.print("x2]  DISTRIBUE");
+    g.setTextColor(ACC, BG); g.setCursor(6, 96); g.print("CAMILLE  18:38");
+    panel(6, 107, 186, 17, false);
+    g.setTextColor(BRIGHT, PANEL); g.setCursor(11, 109); g.print("On dit 20h au Vieux Port ? ");
+    emoji(g, 11 + 156, 109, 0x1F389);
+    g.fillRect(0, 126, 240, 9, PANEL);
+    g.drawFastHLine(0, 126, 240, EDGE_L);
+    g.setTextColor(TXT, PANEL); g.setFont(&fonts::Font0);
+    g.setCursor(4, 127); g.print("MSG 07/30        NOUVEAU: 2        18:42");
+    g.setFont(&fonts::efontJA_12);
+}
+
+// C — « Terminal phosphore » : monochrome vert, IRC dans un CRT.
+void terminal(lgfx::LGFX_Sprite& g) {
+    const uint16_t BG = 0x0060, DIM = 0x02E0, MID = 0x05C0, HOT = 0x07E8;
+    g.fillSprite(BG);
+    g.setTextColor(MID, BG); g.setCursor(4, 2);
+    g.print("== imsg://camille ==================");
+    auto line = [&](int y, const char* who, const char* txt, bool me) {
+        g.setTextColor(me ? HOT : MID, BG);
+        g.setCursor(4, y); g.print(who);
+        g.setTextColor(me ? MID : DIM, BG);
+        g.setCursor(4 + g.textWidth(who), y); g.print(txt);
+    };
+    g.setTextColor(DIM, BG); g.setCursor(4, 18); g.print("--- 18:20 ---");
+    line(32, "<camille> ", "Raison de plus pour venir !", false);
+    line(46, "<moi>     ", "Ok je passe vers 19h30", true);
+    g.setTextColor(DIM, BG); g.setCursor(4, 60); g.print("          * camille a reagi ");
+    g.setCursor(4 + 168, 60); g.print("<3 x2");
+    line(74, "<camille> ", "On dit 20h au Vieux Port ?", false);
+    g.setTextColor(DIM, BG); g.setCursor(4, 102); g.print("----------------------------------------");
+    g.setTextColor(HOT, BG); g.setCursor(4, 114); g.print("> J'arrive vers 19h3");
+    g.fillRect(4 + g.textWidth("> J'arrive vers 19h3") + 1, 114, 6, 12, HOT);
+    // (pas de scanlines : sans alpha, elles effacent le texte — l'effet CRT
+    // se ferait par post-traitement du sprite, à juger plus tard)
+    g.setTextColor(DIM, BG); g.setCursor(4, 126); g.print("[240x135] [wifi:ok] [batt:84%]");
+}
+
+}  // namespace mock
+
+int runMocks(const std::string& dir) {
+    lgfx::LGFX_Sprite g;
+    g.setColorDepth(16);
+    if (!g.createSprite(SCREEN_W, SCREEN_H)) return 1;
+    g.setTextFont(&fonts::efontJA_12);
+    auto save = [&](const char* n) {
+        std::string path = dir + "/" + n + ".bmp";
+        writeBmp(g, path); std::printf("%s\n", path.c_str());
+    };
+    mock::matiere(g);  save("A-matiere");
+    mock::retro(g);    save("B-retro");
+    mock::terminal(g); save("C-terminal");
+    return 0;
+}
+
 // ------------------------------------------------------------ interactif
 struct KeyEdge {
     bool prev[SDL_NUM_SCANCODES] = {false};
@@ -329,6 +471,7 @@ int main(int argc, char** argv) {
     std::string screensDir;
     for (int i = 1; i < argc; ++i) {
         if (!std::strcmp(argv[i], "--screens") && i + 1 < argc) screensDir = argv[++i];
+        else if (!std::strcmp(argv[i], "--mocks") && i + 1 < argc) return runMocks(argv[++i]);
         else if (!std::strcmp(argv[i], "--lang") && i + 1 < argc)
             gLang = gConfig.lang = std::strcmp(argv[i + 1], "fr") ? LANG_EN : LANG_FR, ++i;
         else {

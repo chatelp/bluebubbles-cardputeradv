@@ -148,7 +148,23 @@ static void drawTopBar(const String& title) {
     // Point d'état réseau : bleu quand la synchro est fraîche, ambre pendant
     // le rattrapage, rouge hors ligne. Trois pixels valent une phrase.
     uint16_t dot = !M->wifiOk ? C_RED400 : (M->synced ? C_BLUE400 : C_AMBER400);
-    C->fillCircle(SCREEN_W - C->textWidth(right) - 12, 8, 2, dot);
+    int dotX = SCREEN_W - C->textWidth(right) - 12;
+    C->fillCircle(dotX, 8, 2, dot);
+
+    // Barres de signal type téléphone : 0-4 selon le RSSI (seuils WiFi usuels).
+    // Une barre « éteinte » reste dessinée en creux : l'échelle se lit d'un
+    // coup d'œil, même signal faible.
+    int bars = !M->wifiOk           ? 0
+               : (M->rssi >= -55)   ? 4
+               : (M->rssi >= -65)   ? 3
+               : (M->rssi >= -75)   ? 2
+               : (M->rssi >= -85)   ? 1 : 0;
+    int bx = dotX - 18;
+    for (int b = 0; b < 4; b++) {
+        int h = 3 + b * 2;                       // 3, 5, 7, 9 px
+        uint16_t col = b < bars ? C_SLATE300 : C_INK600;
+        C->fillRect(bx + b * 3, 12 - h, 2, h, col);
+    }
 }
 
 // Barre d'aide : les raccourcis, toujours au même endroit.
