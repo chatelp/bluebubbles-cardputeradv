@@ -1,0 +1,49 @@
+<!-- @dsCard group="Écrans" name="Liste des conversations" subtitle="Lignes, sélection, non-lu" width="760" -->
+<meta charset="utf-8">
+<title>Liste des conversations — BlueBubbles Cardputer</title>
+<style>
+:root{color-scheme:light dark;--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+@media (prefers-color-scheme:dark){:root{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}}
+:root[data-theme="dark"]{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}
+:root[data-theme="light"]{--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--pg);color:var(--fg);
+ font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut)}
+p.lede{margin:0 0 20px;color:var(--mut);max-width:64ch}
+.wrap{max-width:940px;margin:0 auto}
+svg{display:block}
+.dev{background:#05070C;padding:10px;border-radius:10px;display:inline-block;
+ border:1px solid var(--line);box-shadow:0 6px 26px rgba(0,0,0,.35)}
+.dev svg{width:720px;max-width:100%;height:auto;image-rendering:pixelated}
+.dev.x2 svg{width:480px}
+.cap{margin-top:8px;font-size:12px;color:var(--mut)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.gdev{grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:22px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tile .sw{height:62px}
+.tile .meta{padding:9px 11px}
+.tile .nm{font-weight:600;font-size:13px}
+.tile .rl{font-size:11.5px;color:var(--mut);margin-top:2px}
+code,.mono{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hex{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap}
+.hex span{background:var(--pg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+ font:11px/1.5 ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.warn{border-left:3px solid #FFB020;padding:9px 13px;background:var(--card);border-radius:0 8px 8px 0;
+ font-size:13px;margin:16px 0}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+</style>
+
+<div class="wrap">
+<h1>Liste des conversations</h1>
+<p class="lede">L'écran d'accueil. Quatre conversations, deux étages chacune, et le non-lu visible d'un coup d'œil.</p>
+<div class="row"><div><div class="dev x2"><svg viewBox="0 0 240 135" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="240" height="135" fill="#081018"/><rect width="240" height="16" fill="#101829"/><text x="5" y="11" fill="#4AA1FF" font-size="11" text-anchor="start" font-weight="600" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Conversations</text><text x="235" y="11" fill="#8BA1BD" font-size="10" text-anchor="end" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">87%</text><circle cx="9" cy="24" r="2.5" fill="#FFB220"/><text x="15" y="27" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="600" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Julien</text><text x="235" y="27" fill="#8BA1BD" font-size="9" text-anchor="end" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">18:44</text><text x="15" y="38" fill="#8BA1BD" font-size="10" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Parfait, merci !</text><rect y="41" x="6" width="228" height="1" fill="#182441"/><rect y="42" width="240" height="26" fill="#20344A"/><rect y="42" width="2" height="26" fill="#4AA1FF"/><text x="6" y="53" fill="#BDC6DE" font-size="11" text-anchor="start" font-weight="500" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Maman</text><text x="235" y="53" fill="#8BA1BD" font-size="9" text-anchor="end" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">17:02</text><text x="6" y="64" fill="#8BA1BD" font-size="10" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">moi : je t'appelle demain</text><rect y="67" x="6" width="228" height="1" fill="#182441"/><text x="6" y="79" fill="#BDC6DE" font-size="11" text-anchor="start" font-weight="500" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">École Jean Moulin</text><text x="235" y="79" fill="#8BA1BD" font-size="9" text-anchor="end" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">hier</text><text x="6" y="90" fill="#8BA1BD" font-size="10" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Sortie scolaire vendredi</text><rect y="93" x="6" width="228" height="1" fill="#182441"/><text x="6" y="105" fill="#BDC6DE" font-size="11" text-anchor="start" font-weight="500" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Thomas</text><text x="235" y="105" fill="#8BA1BD" font-size="9" text-anchor="end" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">hier</text><text x="6" y="116" fill="#8BA1BD" font-size="10" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">[pièce jointe]</text><rect y="122" width="240" height="13" fill="#101829"/><text x="5" y="131" fill="#8BA1BD" font-size="9" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">↑↓ naviguer   OK ouvrir   r recalibrer</text></svg></div><div class="cap">Liste — quatre conversations visibles</div></div></div><h2>Une ligne, deux étages</h2><p>26 px par conversation : le nom sur la première ligne, l'aperçu sur la seconde, l'heure calée à droite. Quatre tiennent à l'écran — au-delà, on défile. La ligne sélectionnée reçoit un fond <code>ink600</code> et un <b>filet bleu de 2 px</b> à gauche : le fond seul serait trop discret sur un écran très éclairé.</p><h2>Le non-lu</h2><p>Une pastille ambre de 2,5 px de rayon et un nom en blanc plein. Pas de compteur : savoir qu'il y a du nouveau suffit, le nombre exact ne change aucune décision.</p><h2>Aperçus</h2><p>« moi : » préfixe les messages qu'on a envoyés. Les pièces jointes et les messages sans texte deviennent <code>[pièce jointe]</code> — jamais de ligne vide, qui laisserait croire à un bug.</p>
+</div>

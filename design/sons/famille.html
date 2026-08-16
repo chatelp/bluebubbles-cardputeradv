@@ -1,0 +1,183 @@
+<!-- @dsCard group="Sons" name="Famille sonore" subtitle="Cinq signaux, écoutables — barres frappées, pentatonique de ré" width="760" -->
+<meta charset="utf-8">
+<title>Sons — BlueBubbles Cardputer</title>
+<style>
+:root{color-scheme:light dark;--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+@media (prefers-color-scheme:dark){:root{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}}
+:root[data-theme="dark"]{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}
+:root[data-theme="light"]{--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--pg);color:var(--fg);
+ font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut)}
+p.lede{margin:0 0 20px;color:var(--mut);max-width:64ch}
+.wrap{max-width:940px;margin:0 auto}
+svg{display:block}
+.dev{background:#05070C;padding:10px;border-radius:10px;display:inline-block;
+ border:1px solid var(--line);box-shadow:0 6px 26px rgba(0,0,0,.35)}
+.dev svg{width:720px;max-width:100%;height:auto;image-rendering:pixelated}
+.dev.x2 svg{width:480px}
+.cap{margin-top:8px;font-size:12px;color:var(--mut)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.gdev{grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:22px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tile .sw{height:62px}
+.tile .meta{padding:9px 11px}
+.tile .nm{font-weight:600;font-size:13px}
+.tile .rl{font-size:11.5px;color:var(--mut);margin-top:2px}
+code,.mono{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hex{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap}
+.hex span{background:var(--pg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+ font:11px/1.5 ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.warn{border-left:3px solid #FFB020;padding:9px 13px;background:var(--card);border-radius:0 8px 8px 0;
+ font-size:13px;margin:16px 0}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+</style>
+
+<script>
+// Réimplémentation exacte de src/sound.cpp : mêmes partiels (1:4:10), mêmes
+// enveloppes, mêmes notes. Ce qu'on entend ici est ce que joue l'appareil.
+const SR = 11025;
+const D4=293.66, F4=349.23, A4=440, D5=587.33, FS5=739.99;
+let rnd = 22222;
+function noise(){ rnd = (rnd*1664525 + 1013904223) >>> 0; return ((rnd>>>8)/8388608)-1; }
+function note(acc, t0, freq, amp, tau){
+  const PF=[1,4,10], PA=[1,.30,.10], PD=[1,2.1,3.8];
+  const s0 = Math.floor(t0*SR);
+  for(let p=0;p<3;p++){
+    const f = freq*PF[p]; if (f > SR*0.45) continue;
+    const w = 2*Math.PI*f/SR, a = amp*PA[p], d = tau/PD[p];
+    for(let i=s0;i<acc.length;i++){
+      const t=(i-s0)/SR, env=Math.exp(-t/d); if(env<0.0004) break;
+      const atk = t<0.002 ? t/0.002 : 1;
+      acc[i] += a*env*atk*Math.sin(w*(i-s0));
+    }
+  }
+}
+function glide(acc, t0, f0, f1, amp, tau){
+  const s0=Math.floor(t0*SR); let ph=0;
+  for(let i=s0;i<acc.length;i++){
+    const t=(i-s0)/SR, env=Math.exp(-t/tau); if(env<0.0004) break;
+    const k=Math.min(t/(tau*2),1), f=f0+(f1-f0)*k;
+    ph += 2*Math.PI*f/SR;
+    const atk = t<0.003 ? t/0.003 : 1;
+    acc[i] += amp*env*atk*Math.sin(ph);
+  }
+}
+function build(kind){
+  const dur = {key:0.016, sent:0.26, recv:0.32, notif:0.42, err:0.30}[kind];
+  const n = Math.floor(dur*SR), acc = new Float32Array(n);
+  if(kind==='key'){
+    let lp=0;
+    for(let i=0;i<n;i++){ const t=i/SR; lp += (noise()-lp)*0.25; acc[i]+= lp*0.9*Math.exp(-t/0.0022); }
+    glide(acc,0,200,170,0.7,0.009); glide(acc,0,420,400,0.18,0.005);
+  } else if(kind==='sent'){
+    note(acc,0,A4,0.85,0.10); note(acc,0.055,D5,1.0,0.13); glide(acc,0.010,700,1500,0.10,0.075);
+  } else if(kind==='recv'){
+    note(acc,0,D5,0.80,0.11); note(acc,0.075,A4,1.0,0.20); glide(acc,0.075,220,220,0.14,0.18);
+  } else if(kind==='notif'){
+    note(acc,0,A4,0.75,0.10); note(acc,0.075,D5,0.85,0.11);
+    note(acc,0.150,FS5,1.0,0.24); glide(acc,0.150,D4,D4,0.18,0.28);
+  } else {
+    note(acc,0,A4,0.85,0.10); note(acc,0.090,F4,1.0,0.22); note(acc,0.090,F4-5,0.55,0.22);
+  }
+  let peak=0; for(const v of acc) peak=Math.max(peak,Math.abs(v));
+  const target = kind==='key' ? 0.35 : 0.82, g = peak>1e-6 ? target/peak : 0;
+  for(let i=0;i<n;i++) acc[i]*=g;
+  return acc;
+}
+let ctx=null;
+function play(kind, rate){
+  ctx = ctx || new (window.AudioContext||window.webkitAudioContext)();
+  const data = build(kind);
+  const b = ctx.createBuffer(1, data.length, SR);
+  b.getChannelData(0).set(data);
+  const s = ctx.createBufferSource(); s.buffer = b;
+  s.playbackRate.value = rate || 1;
+  s.connect(ctx.destination); s.start();
+}
+function playKeys(){ // frappe rapide : montre la variation de hauteur
+  let i=0; const id=setInterval(()=>{ play('key', 0.96+Math.random()*0.08);
+    if(++i>=7) clearInterval(id); }, 95);
+}
+</script>
+<div class="wrap">
+<h1>Famille sonore</h1>
+<p class="lede">Le Cardputer ADV a un vrai haut-parleur et un codec audio. L'occasion de faire entendre du bois plutôt que des bips.</p>
+<div class="warn"><b>Ces boutons synthétisent le son avec les formules exactes de
+<code>src/sound.cpp</code></b> — mêmes partiels, mêmes enveloppes, même fréquence
+d'échantillonnage. Ce que vous entendez ici est ce que joue l'appareil, au haut-parleur près.</div>
+<h2>Les cinq signaux</h2>
+<div class="grid g3"><div class="tile" style="padding:15px 16px">
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+  <div><div class="nm">Touche du clavier</div><div class="rl">Bruit filtré très bref + basse qui meurt en 9 ms</div></div>
+  <button onclick="playKeys()"
+   style="flex:none;border:0;border-radius:9px;background:#2F7FEE;color:#fff;
+   padding:9px 15px;font-size:13px;font-weight:600;cursor:pointer">Écouter</button>
+ </div>
+ <div class="mono" style="margin-top:9px;color:var(--mut);font-size:11px">16 ms · hauteur variée de ±4 % à chaque frappe · niveau 0,35</div>
+</div><div class="tile" style="padding:15px 16px">
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+  <div><div class="nm">Message envoyé</div><div class="rl">Quarte ascendante A4 → D5, plus un souffle qui monte</div></div>
+  <button onclick="play('sent')"
+   style="flex:none;border:0;border-radius:9px;background:#2F7FEE;color:#fff;
+   padding:9px 15px;font-size:13px;font-weight:600;cursor:pointer">Écouter</button>
+ </div>
+ <div class="mono" style="margin-top:9px;color:var(--mut);font-size:11px">260 ms · A4 puis D5 à 55 ms · glissando 700 → 1500 Hz</div>
+</div><div class="tile" style="padding:15px 16px">
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+  <div><div class="nm">Message reçu</div><div class="rl">Quarte descendante D5 → A4 qui se pose sur un sub chaud</div></div>
+  <button onclick="play('recv')"
+   style="flex:none;border:0;border-radius:9px;background:#2F7FEE;color:#fff;
+   padding:9px 15px;font-size:13px;font-weight:600;cursor:pointer">Écouter</button>
+ </div>
+ <div class="mono" style="margin-top:9px;color:var(--mut);font-size:11px">320 ms · D5 puis A4 à 75 ms · sub 220 Hz</div>
+</div><div class="tile" style="padding:15px 16px">
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+  <div><div class="nm">Notification</div><div class="rl">Arpège de ré majeur, résolu sur la fondamentale grave</div></div>
+  <button onclick="play('notif')"
+   style="flex:none;border:0;border-radius:9px;background:#2F7FEE;color:#fff;
+   padding:9px 15px;font-size:13px;font-weight:600;cursor:pointer">Écouter</button>
+ </div>
+ <div class="mono" style="margin-top:9px;color:var(--mut);font-size:11px">420 ms · A4, D5, F#5 · sub D4 à 150 ms</div>
+</div><div class="tile" style="padding:15px 16px">
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+  <div><div class="nm">Échec d'envoi</div><div class="rl">Tierce descendante, note basse doublée et désaccordée de 5 Hz</div></div>
+  <button onclick="play('err')"
+   style="flex:none;border:0;border-radius:9px;background:#2F7FEE;color:#fff;
+   padding:9px 15px;font-size:13px;font-weight:600;cursor:pointer">Écouter</button>
+ </div>
+ <div class="mono" style="margin-top:9px;color:var(--mut);font-size:11px">300 ms · A4 puis F4 · battement volontaire</div>
+</div></div>
+<h2>Pourquoi ce n'est pas du bip</h2>
+<p>Un buzzer joue une onde carrée à fréquence fixe : l'oreille entend une alarme. Ici chaque
+note est une <b>barre frappée</b> — trois partiels dans le rapport 1 : 4 : 10, l'accord du
+marimba — dont les aigus s'éteignent deux à quatre fois plus vite que le fondamental. C'est
+cette décroissance différenciée qui fait entendre du <i>bois</i> plutôt qu'un circuit.</p>
+<p>Tout est bâti sur la <b>pentatonique de ré majeur</b> (D4, F#, A4, D5, F#5) : aucune paire
+de notes ne peut sonner faux, et les cinq signaux s'entendent comme une famille.</p>
+<h2>Le sens du mouvement</h2>
+<table><tr><th>Signal</th><th>Direction</th><th>Ce que ça dit</th></tr>
+<tr><td>Envoyé</td><td>Montant</td><td>Quelque chose part</td></tr>
+<tr><td>Reçu</td><td>Descendant, se pose</td><td>Quelque chose arrive et reste</td></tr>
+<tr><td>Notification</td><td>Montant puis résolu</td><td>Quelque chose demande votre attention</td></tr>
+<tr><td>Échec</td><td>Descendant, battement</td><td>Quelque chose n'est pas passé</td></tr></table>
+<h2>Contraintes tenues</h2>
+<table><tr><th>Contrainte</th><th>Réponse</th></tr>
+<tr><td>Pas de PSRAM</td><td>11 025 Hz, 5 tampons PCM = <b>29 Ko</b> mesurés sur l'appareil</td></tr>
+<tr><td><code>playRaw</code> ne copie pas</td><td>Tampons rendus une fois au démarrage, jamais libérés</td></tr>
+<tr><td>Frappe rapide</td><td>Le clic varie de ±4 % en hauteur — sinon l'effet mitraillette</td></tr>
+<tr><td>Un clic ne doit pas couper une notification</td><td>Canal 0 pour le clavier, canal 1 pour les événements</td></tr>
+<tr><td>Tout doit pouvoir se taire</td><td>Volume 0–100 et quatre interrupteurs indépendants dans le portail</td></tr>
+<tr><td>Mémoire refusée</td><td>Une catégorie non allouée se désactive au lieu de planter</td></tr></table>
+<p class="note">Les sons ne sont rendus que pour les catégories activées : tout couper ne coûte
+pas un octet.</p>
+</div>

@@ -1,0 +1,49 @@
+<!-- @dsCard group="Écrans" name="Conversation" subtitle="Bulles, composition" width="760" -->
+<meta charset="utf-8">
+<title>Conversation — BlueBubbles Cardputer</title>
+<style>
+:root{color-scheme:light dark;--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+@media (prefers-color-scheme:dark){:root{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}}
+:root[data-theme="dark"]{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}
+:root[data-theme="light"]{--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--pg);color:var(--fg);
+ font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut)}
+p.lede{margin:0 0 20px;color:var(--mut);max-width:64ch}
+.wrap{max-width:940px;margin:0 auto}
+svg{display:block}
+.dev{background:#05070C;padding:10px;border-radius:10px;display:inline-block;
+ border:1px solid var(--line);box-shadow:0 6px 26px rgba(0,0,0,.35)}
+.dev svg{width:720px;max-width:100%;height:auto;image-rendering:pixelated}
+.dev.x2 svg{width:480px}
+.cap{margin-top:8px;font-size:12px;color:var(--mut)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.gdev{grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:22px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tile .sw{height:62px}
+.tile .meta{padding:9px 11px}
+.tile .nm{font-weight:600;font-size:13px}
+.tile .rl{font-size:11.5px;color:var(--mut);margin-top:2px}
+code,.mono{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hex{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap}
+.hex span{background:var(--pg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+ font:11px/1.5 ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.warn{border-left:3px solid #FFB020;padding:9px 13px;background:var(--card);border-radius:0 8px 8px 0;
+ font-size:13px;margin:16px 0}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+</style>
+
+<div class="wrap">
+<h1>Conversation</h1>
+<p class="lede">Le cœur de l'appareil : lire un fil et y répondre, sur sept lignes de treize pixels.</p>
+<div class="row"><div><div class="dev x2"><svg viewBox="0 0 240 135" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="240" height="135" fill="#081018"/><rect width="240" height="16" fill="#101829"/><text x="5" y="11" fill="#4AA1FF" font-size="11" text-anchor="start" font-weight="600" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Julien</text><text x="235" y="11" fill="#8BA1BD" font-size="10" text-anchor="end" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">87%</text><text x="120" y="28" fill="#8BA1BD" font-size="9" text-anchor="middle" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">hier 18:42</text><rect x="6" y="32" width="170" height="19" rx="5" fill="#182441"/><path d="M11 51 L3 51 L7 46 Z" fill="#182441"/><text x="10" y="45" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Tu rentres à quelle heure ?</text><rect x="70" y="58" width="164" height="32" rx="5" fill="#297DEE"/><path d="M229 90 L237 90 L233 85 Z" fill="#297DEE"/><text x="74" y="71" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Vers 19h, je passe prendre</text><text x="74" y="84" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">le pain</text><rect x="6" y="97" width="104" height="19" rx="5" fill="#182441"/><path d="M11 116 L3 116 L7 111 Z" fill="#182441"/><text x="10" y="110" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Parfait, merci !</text><rect y="122" width="240" height="13" fill="#101829"/><text x="5" y="131" fill="#8BA1BD" font-size="9" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">↑↓ defiler   OK ecrire   ` retour</text></svg></div><div class="cap">Conversation — reçues à gauche, envoyées à droite</div></div><div><div class="dev x2"><svg viewBox="0 0 240 135" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="240" height="135" fill="#081018"/><rect width="240" height="16" fill="#101829"/><text x="5" y="11" fill="#4AA1FF" font-size="11" text-anchor="start" font-weight="600" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Julien</text><text x="235" y="11" fill="#8BA1BD" font-size="10" text-anchor="end" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">87%</text><rect x="6" y="20" width="170" height="19" rx="5" fill="#182441"/><path d="M11 39 L3 39 L7 34 Z" fill="#182441"/><text x="10" y="33" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Tu rentres à quelle heure ?</text><rect x="70" y="46" width="164" height="32" rx="5" fill="#297DEE"/><path d="M229 78 L237 78 L233 73 Z" fill="#297DEE"/><text x="74" y="59" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Vers 19h, je passe prendre</text><text x="74" y="72" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">le pain</text><rect y="98" width="240" height="24" fill="#101829"/><rect x="4" y="101" width="232" height="18" rx="6" fill="#182441" stroke="#4AA1FF" stroke-width="1"/><text x="9" y="113" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">je prends aussi du fromage</text><rect x="165" y="104" width="1" height="12" fill="#4AA1FF"/><rect y="122" width="240" height="13" fill="#101829"/><text x="5" y="131" fill="#8BA1BD" font-size="9" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">OK envoyer   ` annuler</text></svg></div><div class="cap">Composition — le champ pousse la conversation vers le haut</div></div></div><h2>Lecture</h2><p>L'alignement porte l'information principale : à gauche l'autre, à droite soi. La couleur la confirme sans la répéter — <code>blue500</code> pour l'envoyé, <code>ink700</code> pour le reçu. Un écran de cette taille ne supporte pas deux systèmes de signes concurrents.</p><h2>Composition</h2><p>Le champ de saisie est <b>surélevé et cerné de bleu</b> : il prend 24 px et repousse la conversation, plutôt que de la recouvrir. On voit toujours à qui l'on répond. Le curseur est une barre pleine de 1 × 12 px, sans clignotement — l'écran n'est rafraîchi qu'à la frappe.</p>
+</div>

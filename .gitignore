@@ -1,0 +1,60 @@
+# --------------------------------------------------------------- build
+.pio/
+.pioenvs/
+.piolibdeps/
+*.o
+*.elf
+*.bin
+*.bin.bak
+
+# ----------------------------------------------------- éditeurs et OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# ------------------------------------------- outillage design (Python)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ------------------------------------------------------ sorties générées
+# Les cartes de design/ SONT versionnées (elles documentent le langage
+# visuel), mais jamais une capture prise sur l'appareil : le portail web
+# rend le formulaire PRÉREMPLI avec le WiFi et les mots de passe réels.
+design/build/
+design/portail/apercu.html
+captures/
+
+# ------------------------------------------------ travail hors dépôt
+private/
+
+# ----------------------------------------------------- réglages locaux
+.claude/settings.local.json
+
+# ------------------------------------------------------------- secrets
+# Le seul secret du projet est le mot de passe du serveur BlueBubbles : il
+# vit en NVS sur l'appareil, jamais ici (garde-fou de CLAUDE.md). Ces
+# règles protègent d'un ajout futur par inadvertance.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+id_rsa*
+id_ed25519*
+*.ppk
+secrets.json
+credentials.json
+service-account*.json
+.netrc

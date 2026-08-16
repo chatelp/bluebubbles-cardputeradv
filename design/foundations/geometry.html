@@ -1,0 +1,49 @@
+<!-- @dsCard group="Foundations" name="Géométrie des bulles" subtitle="Cotes, ergot, zones d'écran" width="760" -->
+<meta charset="utf-8">
+<title>Géométrie des bulles — BlueBubbles Cardputer</title>
+<style>
+:root{color-scheme:light dark;--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+@media (prefers-color-scheme:dark){:root{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}}
+:root[data-theme="dark"]{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}
+:root[data-theme="light"]{--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--pg);color:var(--fg);
+ font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut)}
+p.lede{margin:0 0 20px;color:var(--mut);max-width:64ch}
+.wrap{max-width:940px;margin:0 auto}
+svg{display:block}
+.dev{background:#05070C;padding:10px;border-radius:10px;display:inline-block;
+ border:1px solid var(--line);box-shadow:0 6px 26px rgba(0,0,0,.35)}
+.dev svg{width:720px;max-width:100%;height:auto;image-rendering:pixelated}
+.dev.x2 svg{width:480px}
+.cap{margin-top:8px;font-size:12px;color:var(--mut)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.gdev{grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:22px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tile .sw{height:62px}
+.tile .meta{padding:9px 11px}
+.tile .nm{font-weight:600;font-size:13px}
+.tile .rl{font-size:11.5px;color:var(--mut);margin-top:2px}
+code,.mono{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hex{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap}
+.hex span{background:var(--pg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+ font:11px/1.5 ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.warn{border-left:3px solid #FFB020;padding:9px 13px;background:var(--card);border-radius:0 8px 8px 0;
+ font-size:13px;margin:16px 0}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+</style>
+
+<div class="wrap">
+<h1>Géométrie des bulles</h1>
+<p class="lede">La bulle est le seul objet inventé de ce projet. Tout y est contraint par 240 × 135 : sept lignes, vingt-huit caractères.</p>
+<div class="row"><div><div class="dev x2"><svg viewBox="0 0 240 96" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="240" height="96" fill="#081018"/><rect x="30" y="20" width="122" height="32" rx="5" fill="#182441"/><path d="M35 52 L27 52 L31 47 Z" fill="#182441"/><text x="34" y="33" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Tu rentres à quelle</text><text x="34" y="46" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">heure ?</text><rect x="30" y="20" width="122" height="32" fill="none" stroke="#FFB220" stroke-dasharray="2 2" stroke-width="0.5"/><text x="162" y="30" fill="#FFB220" font-size="8" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">rayon 5 px</text><text x="162" y="42" fill="#FFB220" font-size="8" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">marge 4 x 3 px</text><text x="162" y="54" fill="#FFB220" font-size="8" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">interligne 13 px</text><text x="162" y="66" fill="#FFB220" font-size="8" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">ergot 3 px</text><path d="M42 60 L30 54" stroke="#FFB220" stroke-width="0.5"/></svg></div><div class="cap">Anatomie — cotes réelles</div></div></div><h2>Cotes</h2><div class="scroll"><table><tr><th>Élément</th><th>Valeur</th><th>Raison</th></tr><tr><td><code>Largeur max</code></td><td>176 px (73 %)</td><td>Laisse voir le bord opposé : on lit l'alternance sans lire le texte</td></tr><tr><td><code>Rayon</code></td><td>5 px</td><td>Au-delà, la bulle mange ses propres lettres à cette taille</td></tr><tr><td><code>Marge interne</code></td><td>4 px × 3 px</td><td>Le minimum pour que le texte ne touche pas le bord</td></tr><tr><td><code>Ergot</code></td><td>3 px</td><td>Le seul détail qui fait « messagerie » plutôt que « liste »</td></tr><tr><td><code>Écart même auteur</code></td><td>3 px</td><td>Les messages d'un même tour se touchent presque</td></tr><tr><td><code>Écart entre auteurs</code></td><td>7 px</td><td>Le silence entre deux personnes</td></tr><tr><td><code>Marge d'écran</code></td><td>6 px</td><td>Bord gauche des reçues, bord droit des envoyées</td></tr></table></div><h2>Ce qu'on ne fait pas</h2><p>Pas d'horodatage dans chaque bulle : à 6 px par caractère, « 18:44 » coûte 30 px de largeur utile par message. Le temps s'affiche en <b>séparateur centré</b> entre deux groupes, uniquement quand l'écart dépasse un quart d'heure — c'est la solution d'iMessage, et la seule qui tienne ici.</p><p>Pas d'avatar non plus : 20 px de large volés à chaque ligne pour une initiale que l'alignement dit déjà.</p><h2>Zones de l'écran</h2><p>240 × 135 se découpe en trois bandes fixes : <b>barre supérieure 16 px</b> (titre + batterie), <b>contenu 106 px</b>, <b>barre d'aide 13 px</b>. Les trois sont constantes d'un écran à l'autre : l'utilisateur sait toujours où regarder.</p>
+</div>

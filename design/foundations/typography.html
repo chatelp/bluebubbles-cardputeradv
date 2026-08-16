@@ -1,0 +1,49 @@
+<!-- @dsCard group="Foundations" name="Typographie" subtitle="efontJA 10/12/14 — 6 px par caractère" width="760" -->
+<meta charset="utf-8">
+<title>Typographie — BlueBubbles Cardputer</title>
+<style>
+:root{color-scheme:light dark;--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+@media (prefers-color-scheme:dark){:root{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}}
+:root[data-theme="dark"]{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}
+:root[data-theme="light"]{--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--pg);color:var(--fg);
+ font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut)}
+p.lede{margin:0 0 20px;color:var(--mut);max-width:64ch}
+.wrap{max-width:940px;margin:0 auto}
+svg{display:block}
+.dev{background:#05070C;padding:10px;border-radius:10px;display:inline-block;
+ border:1px solid var(--line);box-shadow:0 6px 26px rgba(0,0,0,.35)}
+.dev svg{width:720px;max-width:100%;height:auto;image-rendering:pixelated}
+.dev.x2 svg{width:480px}
+.cap{margin-top:8px;font-size:12px;color:var(--mut)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.gdev{grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:22px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tile .sw{height:62px}
+.tile .meta{padding:9px 11px}
+.tile .nm{font-weight:600;font-size:13px}
+.tile .rl{font-size:11.5px;color:var(--mut);margin-top:2px}
+code,.mono{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hex{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap}
+.hex span{background:var(--pg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+ font:11px/1.5 ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.warn{border-left:3px solid #FFB020;padding:9px 13px;background:var(--card);border-radius:0 8px 8px 0;
+ font-size:13px;margin:16px 0}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+</style>
+
+<div class="wrap">
+<h1>Typographie</h1>
+<p class="lede">Une seule famille, trois tailles. Le français impose efont : les fontes ASCII de M5GFX n'ont pas d'accents.</p>
+<div class="row"><div><div class="dev x2"><svg viewBox="0 0 240 135" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="240" height="135" fill="#081018"/><text x="8" y="14" fill="#FFFFFF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Message reçu — 12 px</text><text x="8" y="34" fill="#BDC6DE" font-size="10" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Aperçu de conversation — 10 px</text><text x="8" y="54" fill="#8BA1BD" font-size="10" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">18:44 · horodatage — 10 px</text><text x="8" y="74" fill="#8BA1BD" font-size="10" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">↑↓ naviguer  OK ouvrir — 10 px</text><text x="8" y="98" fill="#4AA1FF" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">Àéèêçùôïœ — les accents passent</text><text x="8" y="124" fill="#BDC6DE" font-size="11" text-anchor="start" font-weight="400" opacity="1.0" font-family="ui-sans-serif,Helvetica,Arial" style="letter-spacing:.2px">0123456789 ABCDEFGHIJKLM</text></svg></div><div class="cap">Les trois tailles réellement utilisées</div></div></div><h2>Échelle</h2><div class="scroll"><table><tr><th>Fonte</th><th>Taille</th><th>Emploi</th></tr><tr><td><code>efontJA_10</code></td><td>10 px</td><td>Horodatage, aperçu, barre d'aide, méta</td></tr><tr><td><code>efontJA_12</code></td><td>12 px</td><td>Texte des messages, titres de conversation</td></tr><tr><td><code>efontJA_14</code></td><td>14 px</td><td>Titre d'écran d'état (calibration)</td></tr></table></div><h2>Pourquoi efont et pas les fontes ASCII de M5GFX</h2><p>Les fontes <code>Font0</code>…<code>Font7</code> de M5GFX ne portent pas les accents : « é », « à », « ç » y deviennent des carrés. Toute l'interface étant en français, la famille <code>efontJA</code> est la seule praticable — elle couvre l'ASCII, le latin accentué, et pèse peu.</p><h2>Métriques utiles</h2><p>En <code>efontJA_12</code>, un caractère ASCII occupe <b>6 px</b> de large et l'interligne retenu est de <b>13 px</b> : la zone de conversation (103 px) tient donc <b>7 lignes</b>, et une bulle pleine largeur (176 px) accepte <b>28 caractères</b> par ligne. Ces deux nombres gouvernent tout le découpage de texte du firmware.</p>
+</div>

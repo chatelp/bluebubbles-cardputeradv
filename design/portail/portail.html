@@ -1,0 +1,91 @@
+<!-- @dsCard group="Portail" name="Portail de configuration" subtitle="Formulaire web servi par l'appareil" width="760" -->
+<meta charset="utf-8">
+<title>Portail de configuration — BlueBubbles Cardputer</title>
+<style>
+:root{color-scheme:light dark;--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+@media (prefers-color-scheme:dark){:root{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}}
+:root[data-theme="dark"]{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}
+:root[data-theme="light"]{--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--pg);color:var(--fg);
+ font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut)}
+p.lede{margin:0 0 20px;color:var(--mut);max-width:64ch}
+.wrap{max-width:940px;margin:0 auto}
+svg{display:block}
+.dev{background:#05070C;padding:10px;border-radius:10px;display:inline-block;
+ border:1px solid var(--line);box-shadow:0 6px 26px rgba(0,0,0,.35)}
+.dev svg{width:720px;max-width:100%;height:auto;image-rendering:pixelated}
+.dev.x2 svg{width:480px}
+.cap{margin-top:8px;font-size:12px;color:var(--mut)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.gdev{grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:22px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tile .sw{height:62px}
+.tile .meta{padding:9px 11px}
+.tile .nm{font-weight:600;font-size:13px}
+.tile .rl{font-size:11.5px;color:var(--mut);margin-top:2px}
+code,.mono{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hex{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap}
+.hex span{background:var(--pg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+ font:11px/1.5 ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.warn{border-left:3px solid #FFB020;padding:9px 13px;background:var(--card);border-radius:0 8px 8px 0;
+ font-size:13px;margin:16px 0}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+</style>
+
+<div class="wrap">
+<h1>Portail de configuration</h1>
+<p class="lede">Le seul écran du projet qui ne tient pas dans 240 × 135 : le formulaire que l'appareil sert lui-même, dans un navigateur.</p>
+<div class="row"><div>
+<div style="max-width:340px;background:#0A101B;border-radius:14px;padding:20px 16px 26px;
+ border:1px solid #25344F;font:14px/1.5 ui-sans-serif,-apple-system,sans-serif;color:#fff">
+ <div style="display:flex;align-items:center;gap:10px">
+  <span style="width:9px;height:9px;border-radius:50%;background:#31C48D;
+   box-shadow:0 0 0 3px rgba(49,196,141,.16)"></span>
+  <div style="font-size:17px;font-weight:650"><span style="color:#4DA3FF">BlueBubbles</span> Cardputer</div>
+ </div>
+ <div style="color:#8FA3BC;font-size:12px;margin:4px 0 18px 19px">Configuration de l'appareil</div>
+ <fieldset style="border:1px solid #25344F;border-radius:12px;background:#111A29;padding:2px 13px 14px;margin:0 0 13px">
+  <legend style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#4DA3FF;padding:0 6px;font-weight:600">Serveur BlueBubbles</legend>
+  <div style="margin:11px 0 5px;font-size:12px;color:#B9C7D8">Adresse</div>
+  <div style="padding:9px 10px;border-radius:9px;border:1px solid #4DA3FF;background:#1B2740;
+   box-shadow:0 0 0 3px rgba(77,163,255,.18);font-size:14px">https://mon-serveur.example.com</div>
+  <div style="font-size:11px;color:#8FA3BC;margin-top:5px">Sans barre oblique finale.</div>
+  <div style="margin:12px 0 5px;font-size:12px;color:#B9C7D8">Méthode d'envoi</div>
+  <div style="padding:9px 10px;border-radius:9px;border:1px solid #25344F;background:#1B2740;
+   font-size:14px;display:flex;justify-content:space-between;color:#fff">Private API — recommandé <span style="color:#8FA3BC">⌄</span></div>
+ </fieldset>
+ <div style="padding:13px;border-radius:11px;background:#2F7FEE;color:#fff;text-align:center;
+  font-weight:650;font-size:14px">Enregistrer et redémarrer</div>
+</div><div class="cap">Le portail, en thème sombre</div></div>
+<div style="flex:1;min-width:260px">
+<h2 style="margin-top:0">Quatre groupes, dans l'ordre du besoin</h2>
+<p><b>Réseau</b> puis <b>Serveur BlueBubbles</b> — sans les deux, l'appareil ne fait rien.
+Ensuite <b>Affichage et rythme</b> (intervalle, profondeur d'historique, fuseau) et
+<b>Sécurité</b> (vérification TLS). Un premier démarrage se remplit de haut en bas sans
+jamais revenir en arrière.</p>
+<h2>Emprunts à l'écran</h2>
+<p>Même nuit bleutée, même bleu unique, même règle : un seul accent coloré à la fois. La
+pastille verte de l'en-tête est le seul autre signal — elle dit que l'appareil répond.</p>
+</div></div>
+<h2>Détails qui comptent sur un téléphone</h2>
+<table><tr><th>Choix</th><th>Raison</th></tr>
+<tr><td><code>inputmode</code> et <code>autocapitalize=off</code></td><td>Une URL ou un SSID saisis au doigt ne doivent pas prendre de majuscule automatique</td></tr>
+<tr><td>Champs <code>min</code>/<code>max</code></td><td>L'intervalle (≥ 3 s) et l'historique (4–25) sont bornés côté navigateur ET côté firmware</td></tr>
+<tr><td>Anneau de focus 3 px</td><td>Sur un écran de téléphone en plein soleil, la bordure seule ne se voit pas</td></tr>
+<tr><td>Thème clair automatique</td><td><code>prefers-color-scheme</code> : le portail suit le réglage du téléphone</td></tr>
+<tr><td>Échappement HTML</td><td>Une apostrophe dans un mot de passe cassait le formulaire au rechargement</td></tr>
+</table>
+<h2>Poids</h2>
+<p>La page complète pèse <b>5 Ko</b>, sans aucune ressource externe : elle s'affiche même
+quand le Cardputer est en mode point d'accès, sans Internet.</p>
+</div>

@@ -1,0 +1,49 @@
+<!-- @dsCard group="Foundations" name="Palette" subtitle="14 teintes, quantifiées RGB565" width="760" -->
+<meta charset="utf-8">
+<title>Palette — BlueBubbles Cardputer</title>
+<style>
+:root{color-scheme:light dark;--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+@media (prefers-color-scheme:dark){:root{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}}
+:root[data-theme="dark"]{--pg:#080B12;--fg:#EDF0F7;--mut:#98A2B8;--card:#111622;--line:#232939}
+:root[data-theme="light"]{--pg:#F5F6FA;--fg:#131826;--mut:#5B6478;--card:#FFFFFF;--line:#E2E5EE}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--pg);color:var(--fg);
+ font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut)}
+p.lede{margin:0 0 20px;color:var(--mut);max-width:64ch}
+.wrap{max-width:940px;margin:0 auto}
+svg{display:block}
+.dev{background:#05070C;padding:10px;border-radius:10px;display:inline-block;
+ border:1px solid var(--line);box-shadow:0 6px 26px rgba(0,0,0,.35)}
+.dev svg{width:720px;max-width:100%;height:auto;image-rendering:pixelated}
+.dev.x2 svg{width:480px}
+.cap{margin-top:8px;font-size:12px;color:var(--mut)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.gdev{grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:22px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tile .sw{height:62px}
+.tile .meta{padding:9px 11px}
+.tile .nm{font-weight:600;font-size:13px}
+.tile .rl{font-size:11.5px;color:var(--mut);margin-top:2px}
+code,.mono{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hex{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap}
+.hex span{background:var(--pg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+ font:11px/1.5 ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.warn{border-left:3px solid #FFB020;padding:9px 13px;background:var(--card);border-radius:0 8px 8px 0;
+ font-size:13px;margin:16px 0}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+</style>
+
+<div class="wrap">
+<h1>Palette</h1>
+<p class="lede">Une nuit bleutée pour le fond, un seul bleu saturé pour la parole. Tout le reste est gris : sur un écran de 4 cm, la couleur est un mot, pas un décor.</p>
+<div class="warn"><b>Les pastilles montrent la couleur quantifiée RGB565</b>, pas la valeur d'origine — c'est ce que l'écran affiche réellement.</div><h2>Encre et bulle — 14 teintes</h2><div class="grid g4"><div class="tile"><div class="sw" style="background:#081018"></div><div class="meta"><div class="nm">ink900</div><div class="rl">Fond de l'application — nuit bleutée</div><div class="hex"><span>0x0883</span><span title="dérive due à la quantification">#0A101B → #081018</span></div></div></div><div class="tile"><div class="sw" style="background:#101829"></div><div class="meta"><div class="nm">ink800</div><div class="rl">Barre supérieure, barre d'aide</div><div class="hex"><span>0x10C5</span><span title="dérive due à la quantification">#111A29 → #101829</span></div></div></div><div class="tile"><div class="sw" style="background:#182441"></div><div class="meta"><div class="nm">ink700</div><div class="rl">Bulle reçue, surface surélevée</div><div class="hex"><span>0x1928</span><span title="dérive due à la quantification">#1B2740 → #182441</span></div></div></div><div class="tile"><div class="sw" style="background:#20344A"></div><div class="meta"><div class="nm">ink600</div><div class="rl">Ligne sélectionnée dans la liste</div><div class="hex"><span>0x21A9</span><span title="dérive due à la quantification">#25344F → #20344A</span></div></div></div><div class="tile"><div class="sw" style="background:#394868"></div><div class="meta"><div class="nm">ink500</div><div class="rl">Séparateur, bordure sourde</div><div class="hex"><span>0x3A4D</span><span title="dérive due à la quantification">#3A4B69 → #394868</span></div></div></div><div class="tile"><div class="sw" style="background:#8BA1BD"></div><div class="meta"><div class="nm">slate300</div><div class="rl">Texte secondaire, horodatage</div><div class="hex"><span>0x8D17</span><span title="dérive due à la quantification">#8FA3BC → #8BA1BD</span></div></div></div><div class="tile"><div class="sw" style="background:#BDC6DE"></div><div class="meta"><div class="nm">slate200</div><div class="rl">Aperçu de conversation</div><div class="hex"><span>0xBE3B</span><span title="dérive due à la quantification">#B9C7D8 → #BDC6DE</span></div></div></div><div class="tile"><div class="sw" style="background:#FFFFFF"></div><div class="meta"><div class="nm">white</div><div class="rl">Texte des messages reçus</div><div class="hex"><span>0xFFFF</span><span>#FFFFFF</span></div></div></div><div class="tile"><div class="sw" style="background:#297DEE"></div><div class="meta"><div class="nm">blue500</div><div class="rl">Bulle envoyée — le bleu iMessage</div><div class="hex"><span>0x2BFD</span><span title="dérive due à la quantification">#2F7FEE → #297DEE</span></div></div></div><div class="tile"><div class="sw" style="background:#4AA1FF"></div><div class="meta"><div class="nm">blue400</div><div class="rl">Accent : titres, sélection, focus</div><div class="hex"><span>0x4D1F</span><span title="dérive due à la quantification">#4DA3FF → #4AA1FF</span></div></div></div><div class="tile"><div class="sw" style="background:#8BC6FF"></div><div class="meta"><div class="nm">blue300</div><div class="rl">Méta sur bulle envoyée</div><div class="hex"><span>0x8E3F</span><span title="dérive due à la quantification">#8CC6FF → #8BC6FF</span></div></div></div><div class="tile"><div class="sw" style="background:#31C68B"></div><div class="meta"><div class="nm">green400</div><div class="rl">Serveur OK, envoi confirmé</div><div class="hex"><span>0x3631</span><span title="dérive due à la quantification">#31C48D → #31C68B</span></div></div></div><div class="tile"><div class="sw" style="background:#FFB220"></div><div class="meta"><div class="nm">amber400</div><div class="rl">Pastille non lu, avertissement</div><div class="hex"><span>0xFD84</span><span title="dérive due à la quantification">#FFB020 → #FFB220</span></div></div></div><div class="tile"><div class="sw" style="background:#FF595A"></div><div class="meta"><div class="nm">red400</div><div class="rl">Erreur, batterie faible</div><div class="hex"><span>0xFACB</span><span title="dérive due à la quantification">#FF5A5F → #FF595A</span></div></div></div></div><h2>Règle d'emploi</h2><p>Le bleu <code>blue500</code> n'appartient qu'aux bulles envoyées : c'est le signal « c'est moi qui parle ». Les accents (<code>amber400</code> non lu, <code>red400</code> erreur, <code>green400</code> confirmation) ne s'affichent jamais à plus d'un exemplaire à la fois — sur 240 × 135, deux signaux simultanés n'en font plus aucun. Les couleurs traversent le code en <code>constexpr uint16_t</code> nommées, jamais de littéral inline.</p>
+</div>
