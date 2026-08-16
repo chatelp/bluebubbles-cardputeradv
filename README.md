@@ -1,8 +1,8 @@
 ***English** · [Français](README.fr.md)*
 
-# BlueBubbles Cardputer
+# Silicon Bubbles
 
-**A pocket iMessage client.**
+**A pocket iMessage client** — sibling of [Silicon Casino](https://github.com/chatelp/geek-casino-cardputeradv).
 M5Stack Cardputer ADV · ESP32-S3 · 240 × 135 screen · 56-key keyboard.
 
 A lightweight client for [BlueBubbles](https://bluebubbles.app), the open
@@ -32,7 +32,7 @@ no Socket.IO, no webhooks.
 
 ## Setup, in a browser
 
-On first boot the device raises an access point — join `CardputerBB`
+On first boot the device raises an access point — join `SiliconBubbles`
 (password `bluebubbles`) and open `http://192.168.4.1`. Afterwards the
 same form lives at `http://cardputer.local` on your network.
 

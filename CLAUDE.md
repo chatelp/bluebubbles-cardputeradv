@@ -1,4 +1,4 @@
-# CLAUDE.md — BlueBubbles Cardputer (Cardputer ADV)
+# CLAUDE.md — Silicon Bubbles (Cardputer ADV)
 
 Claude Code est l'agent de développement principal de ce projet. Lire ce
 fichier avant toute décision d'implémentation, puis `docs/01_DECISIONS.md`

@@ -119,3 +119,13 @@ Anti-conflit entre les deux chemins : `AppConfig::rev` est incrémentée à
 chaque enregistrement. Le portail embarque la révision dans son formulaire
 et **refuse** (HTTP 409, page dédiée) si elle a changé entre-temps, au lieu
 d'écraser silencieusement un réglage fait sur l'appareil.
+
+## 2026-08-16 — Nom public : Silicon Bubbles — **ACTÉ**
+
+Le firmware s'appelle **Silicon Bubbles** — famille assumée avec Silicon
+Casino, jeu de mots silicium/champagne qui tient dans les deux langues, et
+une saine distance de marque avec BlueBubbles (le serveur reste un projet
+indépendant : on est « un client compatible BlueBubbles », pas eux).
+Appliqué : splash, portail (titre et en-tête), SSID du point d'accès
+(`SiliconBubbles`), `/status` (`"app":"silicon-bubbles"`), README, dépôt
+GitHub renommé `silicon-bubbles-cardputeradv`.

@@ -297,7 +297,7 @@ static void drawSplash() {
                       d == phase ? C_WHITE : 0xB5FE);
 
     C->setTextColor(C_WHITE, C_INK900);
-    String t1 = "BlueBubbles Cardputer";
+    String t1 = "Silicon Bubbles";
     C->setCursor((SCREEN_W - C->textWidth(t1)) / 2, 58);
     C->print(t1);
 

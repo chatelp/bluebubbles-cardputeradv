@@ -12,7 +12,7 @@ static DNSServer sDns;
 static bool sApMode = false;
 static bool sReboot = false;
 
-static const char* AP_SSID = "CardputerBB";
+static const char* AP_SSID = "SiliconBubbles";
 static const char* AP_PASS = "bluebubbles";
 
 // Portail bilingue. Les libellés et explications vivent ici plutôt que dans
@@ -32,7 +32,7 @@ static String htmlPage() {
     // bleu d'accent, tout le reste en gris (voir design/foundations/palette).
     h += F("<!DOCTYPE html><html lang='LG'><head><meta charset='utf-8'>"
            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-           "<title>BlueBubbles Cardputer</title><style>"
+           "<title>Silicon Bubbles</title><style>"
            ":root{--bg:#0A101B;--sur:#111A29;--sur2:#1B2740;--line:#25344F;"
            "--fg:#fff;--mut:#8FA3BC;--dim:#B9C7D8;--acc:#4DA3FF;--acc2:#2F7FEE;--ok:#31C48D}"
            "*{box-sizing:border-box}"
@@ -73,7 +73,7 @@ static String htmlPage() {
            "--line:#D9E0EC;--fg:#101828;--mut:#667085;--dim:#344054}}"
            "</style></head><body><div class='w'>"
            "<header><span class='dot'></span>"
-           "<h1><b>BlueBubbles</b> Cardputer</h1></header>"
+           "<h1><b>Silicon</b> Bubbles</h1></header>"
            "<p class='sub'>SUBTITLE</p>"
            "<form method='POST' action='/save'>");
     h.replace("<html lang='LG'", gLang == LANG_FR ? "<html lang='fr'" : "<html lang='en'");
@@ -288,7 +288,7 @@ static void handleSave() {
 }
 
 static void handleStatus() {
-    String j = "{\"app\":\"bluebubbles-cardputer\",\"wifi\":\"" +
+    String j = "{\"app\":\"silicon-bubbles\",\"wifi\":\"" +
                WiFi.SSID() + "\",\"rssi\":" + WiFi.RSSI() +
                ",\"ip\":\"" + WiFi.localIP().toString() +
                "\",\"server\":\"" + gConfig.serverUrl + "\"}";

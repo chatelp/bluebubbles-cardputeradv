@@ -53,7 +53,7 @@ public:
         cfg.panel_height = SCREEN_H;
         _panel.config(cfg);
         _panel.setScaling(3, 3);
-        _panel.setWindowTitle("BlueBubbles Cardputer — sim");
+        _panel.setWindowTitle("Silicon Bubbles — sim");
         setPanel(&_panel);
     }
 };
@@ -127,7 +127,7 @@ void fillDemo(UiModel& m) {
     m.rssi = -48;
     m.ssid = "HomeWiFi";
     m.ip = "192.168.1.30";
-    m.apSsid = "CardputerBB";
+    m.apSsid = "SiliconBubbles";
     m.apPass = "bluebubbles";
     m.marker = now - 4 * MIN;
     m.synced = true;

@@ -5,7 +5,7 @@
 //  - en mode AP (premier démarrage / WiFi introuvable) sur http://192.168.4.1
 //  - en mode STA (usage normal) sur l'IP du Cardputer et http://cardputer.local
 namespace ConfigPortal {
-    void startAP();          // ouvre l'AP "CardputerBB" + portail captif
+    void startAP();          // ouvre l'AP "SiliconBubbles" + portail captif
     void startSTA();         // sert la page de config sur l'IP courante + mDNS
     void handle();           // à appeler dans loop()
     bool rebootRequested();  // vrai après sauvegarde : l'appli doit redémarrer

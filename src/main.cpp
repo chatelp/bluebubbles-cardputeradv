@@ -1,4 +1,4 @@
-// BlueBubbles Cardputer — client iMessage léger pour M5Stack Cardputer ADV.
+// Silicon Bubbles — client iMessage léger pour M5Stack Cardputer ADV.
 // Lecture/envoi de messages via l'API REST d'un serveur BlueBubbles, par
 // polling. Configuration par portail web embarqué (voir config_portal.cpp).
 
