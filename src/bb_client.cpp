@@ -1,4 +1,5 @@
 #include "bb_client.h"
+#include "bb_errors.h"
 #include "app_config.h"
 #include "bb_emoji.h"
 #include "bb_streams.h"
@@ -158,13 +159,13 @@ bool BBClient::requestJson(const char* method, const String& path, const String&
     if (httpCodeOut) *httpCodeOut = 0;
     err = "";
     if (WiFi.status() != WL_CONNECTED) {
-        err = "WiFi deconnecte";
+        err = T(S_NO_WIFI);  // cas évident : message nu, sans code
         return false;
     }
     if (ESP.getMaxAllocHeap() < MIN_WORK_HEAP) {
         Serial.printf("[bb] heap contigu %u < %u : requete differee\n",
                       (unsigned)ESP.getMaxAllocHeap(), (unsigned)MIN_WORK_HEAP);
-        err = "Memoire insuffisante";
+        err = bbErr(BB_E40_DEVICE_MEMORY);
         return false;
     }
 
@@ -186,7 +187,7 @@ bool BBClient::requestJson(const char* method, const String& path, const String&
         ok = http.begin(sPlain, apiUrl(path));
     }
     if (!ok) {
-        err = "URL invalide";
+        err = bbErr(BB_E50_URL);
         return false;
     }
 
@@ -194,7 +195,12 @@ bool BBClient::requestJson(const char* method, const String& path, const String&
     int code = (strcmp(method, "POST") == 0) ? http.POST(jsonBody) : http.GET();
 
     if (code <= 0) {
-        err = HTTPClient::errorToString(code);
+        // Le détail (refus TCP, poignée de main TLS, coupure…) va en série ;
+        // l'utilisateur n'a besoin que de la cause actionnable.
+        Serial.printf("[bb] transport %d : %s\n", code,
+                      HTTPClient::errorToString(code).c_str());
+        err = bbErr(code == HTTPC_ERROR_READ_TIMEOUT ? BB_E13_TIMEOUT
+                                                     : BB_E11_UNREACHABLE);
         http.end();
         return false;
     }
@@ -203,7 +209,7 @@ bool BBClient::requestJson(const char* method, const String& path, const String&
     int len = http.getSize();
     if (len > LEN_SANITY) {
         Serial.printf("[bb] rejet %d o (aberrant)\n", len);
-        err = String("Reponse aberrante (") + (len / 1024) + " Ko)";
+        err = bbErr(BB_E30_RESPONSE_HUGE, len / 1024);
         raw->stop();  // corps non lu : la connexion est sale
         http.end();
         return false;
@@ -267,18 +273,24 @@ bool BBClient::requestJson(const char* method, const String& path, const String&
     http.end();
 
     if (code >= 400) {
+        // Le message du serveur (anglais, technique) va en série ; l'écran
+        // reçoit un code stable, documenté dans le README.
         const char* msg = out["error"]["message"] | (const char*)(out["message"] | "");
-        err = String("HTTP ") + code + (strlen(msg) ? String(" : ") + msg : String());
+        if (strlen(msg)) Serial.printf("[bb] http %d : %s\n", code, msg);
+        if (code == 401 || code == 403) err = bbErr(BB_E20_AUTH);
+        else if (code == 404) err = bbErr(BB_E22_NOT_FOUND);
+        else if (code >= 500) err = bbErr(BB_E21_SERVER, code);
+        else err = bbErr(BB_E23_HTTP, code);
         out.clear();
         return false;
     }
     if (e) {
-        err = String("JSON : ") + e.c_str();
+        err = bbErr(BB_E31_RESPONSE_BAD);  // le détail du parse est déjà en série
         return false;
     }
     if (out.overflowed()) {
         Serial.println("[bb] document JSON hors budget");
-        err = "JSON hors budget memoire";
+        err = bbErr(BB_E32_RESPONSE_MEMORY);
         return false;
     }
     return true;

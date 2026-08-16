@@ -13,6 +13,7 @@
 #include "bb_client.h"
 #include "bb_emoji.h"
 #include "bb_scroll.h"
+#include "bb_errors.h"
 #include "i18n.h"
 #include "ui/render.h"
 #include "ui/theme.h"
@@ -428,11 +429,16 @@ static void maybeDecay() {
 // ---------------------------------------------------------------------------
 
 static void netWorkCalibrate() {
-    // Pages de 10 (~18 Ko de corps) : c'est le plus gros bloc contigu que le
-    // tas puisse fournir en fonctionnement (~31 Ko mesurés). Voir bb_client.cpp.
+    // Pages de 10 (~18 Ko de corps), parsées en flux : la profondeur du
+    // balayage ne coûte AUCUNE mémoire, seulement du temps. La fenêtre
+    // s'arrête donc au premier critère atteint : liste PLEINE (LIST_MAX
+    // conversations distinctes — c'est ce que l'utilisateur veut), ou
+    // 1000 messages, ou 90 jours. L'ancienne fenêtre de 300 messages datait
+    // d'un bug de transport corrigé depuis (docs/02, piège readBytes) et
+    // laissait des listes de 4 conversations (constat PO 2026-08-16).
     const uint8_t PAGE = 10;
-    const uint8_t MAX_PAGES = 30;  // ~300 messages (~25 s)
-    const int64_t WINDOW_MS = 30LL * 86400000LL;
+    const uint8_t MAX_PAGES = 100;
+    const int64_t WINDOW_MS = 90LL * 86400000LL;
 
     sUi.calibrating = true;
     sUi.calibPage = 1;
@@ -494,6 +500,7 @@ static void netWorkCalibrate() {
         if (before == prevBefore) break;  // curseur immobile : on relirait la même fenêtre
         prevBefore = before;
         if (newest && before && newest - before > WINDOW_MS) break;
+        if ((int)built.size() >= LIST_MAX) break;  // liste pleine : mission accomplie
         if (uxQueueMessagesWaiting(sNetQueue) > 0) { aborted = true; break; }  // l'utilisateur attend
     }
     if (built.empty()) {
@@ -685,7 +692,7 @@ static void netWorkMsgs(const String& guid, bool incremental) {
         if (sChatEpoch == epoch) {
             // Le fil n'existe plus côté Mac : le dire en français, et ne pas
             // laisser l'ancien contenu passer pour vivant.
-            if (err.startsWith("HTTP 404")) {
+            if (err.startsWith("E22")) {
                 sUi.msgs.clear();
                 sUi.statusView = T(S_CHAT_DELETED);
             } else {

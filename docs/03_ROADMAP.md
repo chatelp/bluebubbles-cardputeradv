@@ -161,6 +161,32 @@ envoi), endpoint /debug/conv, STORE_VER 3 (recalibration auto).
       (clavier ignoré) ; plein écran conservé pour la synchro initiale —
       validé sur l'appareil (doublon absorbé, interruption sans perte)
 
+## v0.16 — Fenêtre de calibration élargie (2026-08-16) — flashé, validé
+
+Constat PO : « je n'ai que 4 conversations, c'est très peu ». La fenêtre de
+300 messages / 30 jours datait d'un bug de transport corrigé depuis (piège
+readBytes, docs/02) — et le parsing en flux rend la profondeur du balayage
+GRATUITE en mémoire : elle ne coûte que du temps de calibration.
+
+- [x] Nouveau critère d'arrêt, dans l'ordre : **liste pleine** (20
+      conversations distinctes — ce que l'utilisateur veut vraiment),
+      1000 messages, ou 90 jours
+- [x] Validé sur l'appareil : 4 → 9-11 conversations après recalibration
+
+## v0.15 — Codes d'erreur utilisateur (2026-08-16) — flashé
+
+- [x] **Table de codes stables E11-E50** (`include/bb_errors.h`, bilingue) :
+      un code par cause actionnable — injoignable, timeout, mot de passe
+      refusé, 5xx, API introuvable, proxy, réponse aberrante/interrompue/
+      trop grosse, mémoire appareil, URL invalide. Le jargon (« JSON »,
+      transport, messages serveur) va en console série, jamais à l'écran ;
+      les cas évidents (WiFi perdu) restent un message nu sans code
+- [x] Table publique documentée dans les **deux README** (cause + geste de
+      réparation), source de vérité pointée
+- [x] Le bandeau d'état reconnaît les codes E## pour virer au rouge (fin de
+      la liste de mots-clés fragile) ; « conversation supprimée » détectée
+      par E22 et non plus par le texte « HTTP 404 »
+
 ## v0.14 — Direction visuelle « D » (2026-08-16) — flashé
 
 Actée par le PO après maquettes comparatives au simulateur (A matière /

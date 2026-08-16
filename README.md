@@ -106,6 +106,32 @@ than the decrypted buffer.
 
 ---
 
+## Error codes
+
+Plain problems show a plain message (“No WiFi”). Anything involving the
+BlueBubbles server shows a **stable code** you can look up here — the
+technical detail always goes to the serial console (115200), never to the
+screen.
+
+| Code | Message | Likely cause — what to check |
+|---|---|---|
+| E11 | server unreachable | Wrong address, server down, or the device can't reach it (VPN, VLAN, firewall). Try the address in a browser on the same network. |
+| E13 | server not answering | Connected, but no reply in time. Server overloaded or link very slow — usually transient. |
+| E20 | server password refused | The password in the portal doesn't match the BlueBubbles server password (Mac app → API). |
+| E21 | error on the server side | The server itself failed (5xx, code shown). Check the BlueBubbles server logs on the Mac. |
+| E22 | BlueBubbles API not found | The address answers, but it isn't a BlueBubbles API: wrong URL path, reverse-proxy misroute, or a very old server. |
+| E23 | unexpected HTTP reply | Something between the device and the server answered instead of it (captive portal, proxy). Code shown. |
+| E30 | absurd response size | The server announced an absurdly large reply. Report it — the device protected itself. |
+| E31 | response cut short | The reply died mid-transfer: unstable link between device and server. Usually transient; recurring → check the proxy. |
+| E32 | response exceeds memory | Valid reply, too big for the device's RAM. Lower “messages per conversation” in the portal. |
+| E40 | device memory is full | Momentary. The device retries on its own; reboot if it persists. |
+| E50 | invalid server address | Must start with `http://` or `https://`, no trailing path. |
+
+The source of truth is [`include/bb_errors.h`](include/bb_errors.h) — keep
+this table in sync with it.
+
+---
+
 ## Documentation
 
 The project documentation is in French.

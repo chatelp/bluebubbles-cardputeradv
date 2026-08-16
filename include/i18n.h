@@ -29,7 +29,7 @@ enum StrId : uint8_t {
     S_SETTINGS, S_LANGUAGE, S_SOUNDS, S_SND_KEYS, S_SND_SENT, S_SND_RECV,
     S_SND_NOTIF, S_VOLUME, S_POLL, S_ON, S_OFF, S_HINT_SETTINGS, S_SAVED,
     S_PORTAL_ONLY,
-    S_ME_PREFIX, S_ME_CAPS, S_NEW_COUNT, S_SETUP_WIFI, S_SETUP_PASS, S_SETUP_FILL, S_SETUP_REBOOT,
+    S_NO_WIFI, S_ME_PREFIX, S_ME_CAPS, S_NEW_COUNT, S_SETUP_WIFI, S_SETUP_PASS, S_SETUP_FILL, S_SETUP_REBOOT,
     // Contenu de message (bb_client)
     S_ATTACHMENT, S_NO_TEXT, S_RETRACTED, S_EDITED,
     S_COUNT
@@ -94,6 +94,7 @@ static const char* const kStrings[S_COUNT][LANG_COUNT] = {
     {";. field  ,/ value  ` save", ";. champ  ,/ valeur  ` enreg."},
     {"Saved", "Enregistre"},
     {"WiFi and server: web portal only", "WiFi et serveur : portail web"},
+    {"No WiFi", "WiFi perdu"},
     {"me: ", "moi : "},
     {"ME", "MOI"},
     {"NEW: ", "NOUVEAU: "},

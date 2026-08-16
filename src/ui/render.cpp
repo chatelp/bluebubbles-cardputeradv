@@ -11,6 +11,7 @@
 #include "bb_emoji.h"
 #include "bb_scroll.h"
 #include "emoji_art.h"
+#include "bb_errors.h"
 #include "i18n.h"
 #include "theme.h"
 
@@ -235,12 +236,14 @@ static void drawStatusLine(const String& st) {
     int y = SCREEN_H - HINT_H;
     // Heuristique bilingue : les deux langues doivent virer au rouge — un
     // mot-clé oublié laisserait une erreur en gris, indistinguable d'un état.
-    static const char* kErr[] = {"Erreur", "Echec", "Error", "failed", "injoignable",
-                                 "Occupe", "Busy",  "HTTP",  "Delai",  "imeout",
-                                 "Memoire", "memory", "WiFi", "not found"};
-    bool err = false;
-    for (const char* k : kErr)
-        if (st.indexOf(k) >= 0) { err = true; break; }
+    // Un code « E## » (bb_errors.h) marque une erreur à coup sûr ; la liste
+    // de mots-clés ne couvre plus que les messages sans code (WiFi perdu…).
+    static const char* kErr[] = {"Erreur", "Echec", "Error", "failed",
+                                 "Occupe", "Busy", "WiFi"};
+    bool err = bbErrIsCode(st.c_str());
+    if (!err)
+        for (const char* k : kErr)
+            if (st.indexOf(k) >= 0) { err = true; break; }
     uint16_t col = err ? C_RED400 : (st.indexOf("OK") >= 0 ? C_GREEN400 : C_SLATE300);
     drawBevelPanel(0, y, SCREEN_W, HINT_H);
     C->fillRect(0, y, 2, HINT_H, col);

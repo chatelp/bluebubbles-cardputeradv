@@ -107,6 +107,32 @@ réponse plus grosse que le tampon déchiffré.
 
 ---
 
+## Codes d'erreur
+
+Les problèmes évidents affichent un message nu (« WiFi perdu »). Tout ce qui
+touche au serveur BlueBubbles affiche un **code stable** à retrouver ici —
+le détail technique va toujours sur la console série (115200), jamais à
+l'écran.
+
+| Code | Message | Cause probable — quoi vérifier |
+|---|---|---|
+| E11 | serveur injoignable | Adresse fausse, serveur éteint, ou appareil qui ne peut pas l'atteindre (VPN, VLAN, pare-feu). Essayez l'adresse dans un navigateur sur le même réseau. |
+| E13 | serveur sans réponse | Connecté, mais pas de réponse à temps. Serveur surchargé ou lien très lent — souvent passager. |
+| E20 | mot de passe serveur refusé | Le mot de passe du portail ne correspond pas à celui du serveur BlueBubbles (app Mac → API). |
+| E21 | erreur côté serveur | Le serveur lui-même a échoué (5xx, code affiché). Voir les journaux du serveur sur le Mac. |
+| E22 | API BlueBubbles introuvable | L'adresse répond, mais ce n'est pas une API BlueBubbles : mauvais chemin, reverse-proxy mal routé, ou serveur très ancien. |
+| E23 | réponse HTTP inattendue | Quelque chose a répondu à la place du serveur (portail captif, proxy). Code affiché. |
+| E30 | réponse aberrante | Le serveur annonce une réponse d'une taille absurde. Signalez-le — l'appareil s'est protégé. |
+| E31 | réponse interrompue | La réponse est morte en plein transfert : lien instable entre l'appareil et le serveur. Souvent passager ; récurrent → vérifier le proxy. |
+| E32 | réponse trop grosse (mémoire) | Réponse valide mais au-delà de la RAM de l'appareil. Baissez « messages chargés par conversation » dans le portail. |
+| E40 | mémoire de l'appareil saturée | Momentané. L'appareil réessaie tout seul ; redémarrez si ça persiste. |
+| E50 | adresse du serveur invalide | Doit commencer par `http://` ou `https://`, sans chemin final. |
+
+La source de vérité est [`include/bb_errors.h`](include/bb_errors.h) — cette
+table doit lui rester synchrone.
+
+---
+
 ## Documentation
 
 | | |
