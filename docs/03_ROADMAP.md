@@ -161,6 +161,20 @@ envoi), endpoint /debug/conv, STORE_VER 3 (recalibration auto).
       (clavier ignoré) ; plein écran conservé pour la synchro initiale —
       validé sur l'appareil (doublon absorbé, interruption sans perte)
 
+## v0.18 — Alias dans le chrome, et écran À propos (2026-08-16) — flashé
+
+- [x] **Le nom local prime dans la barre de titre** et les étiquettes QUI :
+      `openChat` figeait le titre serveur, le numéro restait affiché malgré
+      l'alias (constat PO)
+- [x] **Troncature du chrome resserrée** (140 px) : un nom long s'arrête sur
+      « … » et ne mange jamais batterie ni signal ; dans l'étiquette QUI,
+      c'est le NOM qui cède, jamais l'heure (« …DELACROIX 1 » pour 18:38)
+- [x] **Écran À propos** (Infos → `a`), même patron que Silicon Casino : nom,
+      auteur, crédit d'outil avec l'astre Claude qui bat d'un pixel, puis la
+      distinction honnête — adaptée ici, où le réseau EXISTE : « aucune IA ne
+      tourne sur l'appareil », « votre Mac, votre appareil, rien entre les
+      deux » — et la licence
+
 ## v0.17 — Mobilité : WiFi/serveur sur l'appareil, QR, SD, alias (2026-08-16) — flashé
 
 Cinq demandes PO d'un même mouvement — pouvoir vivre avec l'appareil hors

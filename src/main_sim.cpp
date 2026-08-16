@@ -229,6 +229,8 @@ int runScreens(const std::string& dir) {
     m.qrTitle = T(S_QR_PORTAL_T);
     m.qrSub = T(S_QR_PORTAL_S);
     shot("15-qr-portal");
+    m.screen = SCR_ABOUT;
+    shot("16-about");
     m.screen = SCR_SPLASH;
     m.calibrating = true; m.calibPage = 12; m.calibTotal = 30; m.synced = false;
     shot("10-splash-sync");

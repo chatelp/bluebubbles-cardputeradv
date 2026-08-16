@@ -191,7 +191,9 @@ static void drawTopBar(const String& title) {
 
     C->setTextColor(C_WHITE, C_PANEL);
     C->setCursor(20, 2);
-    C->print(fitText(upperLabel(title), 148));
+    // Borne stricte : les instruments commencent vers x=170 — un nom long
+    // s'arrête net avec « … », il ne mange jamais batterie ni signal.
+    C->print(fitText(upperLabel(title), 140));
 
     // À droite, des instruments DESSINÉS : % batterie (Font0), barres de
     // signal (échelle en creux toujours visible), pile avec son remplissage.
@@ -567,6 +569,7 @@ static void drawMessages(bool composeMode) {
         bool separator = false;   // horodatage centré
         bool senderHdr = false;   // nom de l'expéditeur (groupes)
         String sepText;
+        String sepTime;
     };
     std::vector<Block> blocks;
     const int contentW = BUB_MAXW - BUB_PADX * 2;
@@ -589,7 +592,10 @@ static void drawMessages(bool composeMode) {
             h.sent = m.fromMe;  // aligne l'étiquette du côté de sa bulle
             String who = m.fromMe ? String(T(S_ME_CAPS))
                                   : (isGroup && m.sender.length() ? m.sender : M->curChatTitle);
-            h.sepText = upperLabel(who) + " " + timeShort(m.date);
+            // L'heure est intouchable : c'est le NOM qui cède s'il est long
+            // (sinon on affiche « …DELACROIX 1 » pour 18:38).
+            h.sepText = upperLabel(who);
+            h.sepTime = timeShort(m.date);
             h.h = 11;
             blocks.push_back(h);
         }
@@ -663,7 +669,9 @@ static void drawMessages(bool composeMode) {
 
         if (b.senderHdr) {
             C->setFont(&fonts::Font0);
-            String lbl = fitText(b.sepText, BUB_MAXW);
+            int tW = C->textWidth(b.sepTime);
+            String lbl = fitText(b.sepText, BUB_MAXW - tW - 6);
+            if (b.sepTime.length()) lbl += " " + b.sepTime;
             int lx = b.sent ? SCREEN_W - EDGE - C->textWidth(lbl) : EDGE + 1;
             C->setTextColor(C_SLATE300, C_INK900);
             C->setCursor(lx, y + 2);
@@ -825,6 +833,71 @@ static void drawQrScreen() {
     drawHintBar(T(S_HINT_QR));
 }
 
+// L'astre Claude, 12 x 12 — même dessin que Silicon Casino (lib/ui/symbols.h),
+// porté tel quel : les deux projets partagent leur crédit d'outil.
+static void drawClaudeMark(int x, int y, uint16_t col) {
+    static const uint8_t kMark[12][12] = {
+        {0,0,0,0,0,1,1,0,0,0,0,0}, {0,1,0,0,0,1,1,0,0,0,1,0},
+        {0,0,1,0,0,1,1,0,0,1,0,0}, {0,0,0,1,0,1,1,0,1,0,0,0},
+        {0,0,0,0,1,1,1,1,0,0,0,0}, {1,1,1,1,1,1,1,1,1,1,1,1},
+        {1,1,1,1,1,1,1,1,1,1,1,1}, {0,0,0,0,1,1,1,1,0,0,0,0},
+        {0,0,0,1,0,1,1,0,1,0,0,0}, {0,0,1,0,0,1,1,0,0,1,0,0},
+        {0,1,0,0,0,1,1,0,0,0,1,0}, {0,0,0,0,0,1,1,0,0,0,0,0},
+    };
+    for (int dy = 0; dy < 12; dy++)
+        for (int dx = 0; dx < 12; dx++)
+            if (kMark[dy][dx]) C->drawPixel(x + dx, y + dy, col);
+}
+
+// Écran À propos — même patron que Silicon Casino : le nom, l'auteur, le
+// crédit d'outil (l'astre bat doucement : c'est un remerciement, pas une
+// mention légale), puis la distinction honnête, puis la licence.
+static void drawAbout() {
+    C->fillSprite(C_INK900);
+    drawTopBar(T(S_ABOUT));
+
+    C->setTextColor(C_BLUE400, C_INK900);
+    String t = "Silicon Bubbles";
+    C->setCursor((SCREEN_W - C->textWidth(t)) / 2, 22);
+    C->print(t);
+
+    C->setFont(&fonts::Font0);
+    C->setTextColor(C_WHITE, C_INK900);
+    String by = upperLabel(T(S_ABOUT_BY));
+    C->setCursor((SCREEN_W - C->textWidth(by)) / 2, 40);
+    C->print(by);
+
+    // Crédit outil : l'astre en tête de ligne, qui respire d'un pixel.
+    String cc = upperLabel(T(S_ABOUT_TOOL));
+    int lw = C->textWidth(cc);
+    int bx = (SCREEN_W - lw - 16) / 2;
+    int pulse = ((millis() / 600) & 1) ? 1 : 0;
+    drawClaudeMark(bx, 52 - pulse, C_AMBER400);
+    C->setTextColor(C_AMBER400, C_INK900);
+    C->setCursor(bx + 16, 55);
+    C->print(cc);
+
+    // La distinction héritée de Silicon Casino, adaptée : ici le réseau
+    // EXISTE — l'honnêteté consiste à dire par où passent les messages.
+    C->setTextColor(C_SLATE300, C_INK900);
+    String l1 = upperLabel(T(S_ABOUT_NOAI));
+    C->setCursor((SCREEN_W - C->textWidth(l1)) / 2, 74);
+    C->print(l1);
+    String l2 = upperLabel(T(S_ABOUT_DIRECT));
+    C->setCursor((SCREEN_W - C->textWidth(l2)) / 2, 86);
+    C->print(l2);
+    String l2b = upperLabel(T(S_ABOUT_DIRECT2));
+    C->setCursor((SCREEN_W - C->textWidth(l2b)) / 2, 96);
+    C->print(l2b);
+
+    C->setTextColor(C_INK600, C_INK900);
+    String l3 = upperLabel("MIT - GITHUB.COM/CHATELP");
+    C->setCursor((SCREEN_W - C->textWidth(l3)) / 2, 110);
+    C->print(l3);
+    C->setFont(&fonts::efontJA_12);
+    drawHintBar(T(S_HINT_ABOUT));
+}
+
 static void drawInfo() {
     C->fillSprite(C_INK900);
     drawTopBar(T(S_INFO));
@@ -954,6 +1027,7 @@ void uiRender(BbCanvas& canvas, UiModel& m) {
         case SCR_WIFI_SCAN:  drawWifiScan(); break;
         case SCR_TEXT_INPUT: drawTextInput(); break;
         case SCR_QR:         drawQrScreen(); break;
+        case SCR_ABOUT:      drawAbout(); break;
     }
 }
 

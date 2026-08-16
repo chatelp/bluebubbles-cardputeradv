@@ -968,7 +968,9 @@ static void openChat(int idx) {
     if (idx < 0 || idx >= (int)sUi.chats.size()) return;
     sCurChatGuid = sUi.chats[idx].guid;
     sUi.curChatKey = sUi.chats[idx].key;
-    sUi.curChatTitle = sUi.chats[idx].title;
+    // L'alias local prime partout — barre de titre et étiquettes QUI compris.
+    sUi.curChatTitle = sUi.chats[idx].alias.length() ? sUi.chats[idx].alias
+                                                     : sUi.chats[idx].title;
     sUi.msgs.clear();
     sUi.msgScroll = 0;
     sMsgPollN = 0;  // le cycle de rechargement complet suit la conversation affichée
@@ -977,7 +979,7 @@ static void openChat(int idx) {
     sUi.seen[sUi.curChatKey] = sUi.chats[idx].lastDate;
     sLastPollMsgs = millis();
     sUi.statusView = netEnqueue(NET_MSGS, sCurChatGuid) ? T(S_LOADING)
-                                                     : "Occupe : quittez et rouvrez";
+                                                     : T(S_BUSY_RETRY);
     if (sMarker != sMarkerSaved) storeSaveMarker();  // « événement visible » : on persiste
     sDirty = true;
 }
@@ -1064,8 +1066,12 @@ static void handleKeys() {
                 else if (c == '.') sUi.msgScroll = max(0, sUi.msgScroll - 1);
                 else if (c == '`') { sUi.screen = SCR_CHATS; pollChats(true); }
                 break;
+            case SCR_ABOUT:
+                if (c == '`') sUi.screen = SCR_INFO;
+                break;
             case SCR_INFO:
                 if (c == '`') sUi.screen = SCR_CHATS;
+                else if (c == 'a') { sUi.screen = SCR_ABOUT; sUi.status = ""; }
                 else if (c == 'p')
                     sUi.status = netEnqueue(NET_PING) ? T(S_TESTING_SERVER) : T(S_BUSY_RETRY);
                 else if (c == 's') { sUi.screen = SCR_SETTINGS; sUi.setSel = 0; sUi.status = ""; }
@@ -1375,6 +1381,10 @@ void loop() {
             sUi.scanSel = 0;
             sDirty = true;
         }
+    }
+    if (sUi.screen == SCR_ABOUT) {
+        static uint32_t lastPulse = 0;
+        if (millis() - lastPulse > 300) { lastPulse = millis(); sDirty = true; }
     }
     if (sUi.screen == SCR_SPLASH) {
         // Fin de la première synchro : place aux conversations. Et tant que

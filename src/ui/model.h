@@ -10,7 +10,7 @@
 
 enum Screen {
     SCR_SPLASH, SCR_SETUP, SCR_CHATS, SCR_MESSAGES, SCR_COMPOSE, SCR_INFO,
-    SCR_SETTINGS, SCR_WIFI_SCAN, SCR_TEXT_INPUT, SCR_QR
+    SCR_SETTINGS, SCR_WIFI_SCAN, SCR_TEXT_INPUT, SCR_QR, SCR_ABOUT
 };
 
 // Champs de l'écran Réglages — l'ordre est l'ordre d'affichage.
