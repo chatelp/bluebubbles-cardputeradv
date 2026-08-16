@@ -187,6 +187,10 @@ python3 scripts/make_store_images.py  # cover M5Burner, mosaïque 3x2, GIF
       d'étiquette sous la barre (étiquette d'un message défilé), et émojis
       de démonstration hors couverture qui tombaient sur le glyphe « ? »
 - [x] README bilingues illustrés : héros, GIF, galerie 3×2
+- [x] **Jeu de démonstration bilingue** : le contenu suit la langue de
+      l'interface (`--lang`), les images publiées sont donc entièrement en
+      anglais — chrome ET messages. Un chrome anglais sur des messages
+      français passait inaperçu jusqu'au montage (constat PO)
 
 ## v0.18 — Alias dans le chrome, et écran À propos (2026-08-16) — flashé
 

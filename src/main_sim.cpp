@@ -94,31 +94,56 @@ BBMsg mkMsg(const char* text, int64_t date, bool fromMe, const char* sender = ""
 void fillDemo(UiModel& m) {
     const int64_t now = demoNow();
     const int64_t MIN = 60000, H = 3600000, D = 86400000;
+    const bool fr = (gLang == LANG_FR);
+
+    // Le jeu de démonstration suit la langue de l'interface : les captures
+    // publiées (anglais par défaut) ne doivent pas mélanger un chrome
+    // anglais et des messages français.
+    auto L = [&](const char* en, const char* frTxt) { return fr ? frTxt : en; };
 
     m.chats.clear();
-    m.chats.push_back(mkChat("621043678", "Camille", "On dit 20h au Vieux Port ? 🎉", now - 4 * MIN, false));
-    m.chats.push_back(mkChat("633728194", "Papa", "Bien recu, merci fiston 👍", now - 52 * MIN, false));
-    m.chats.push_back(mkChat("677301582", "Lucie", "J'apporte le dessert ✨", now - 3 * H, true));
-    m.chats.push_back(mkChat("606459217", "Antoine B.", "Le PCB v2 est parti en prod 🔥", now - 26 * H, false));
-    m.chats.push_back(mkChat("688112430", "Maman", "Appelle-moi quand tu peux ❤️", now - 2 * D, false));
+    m.chats.push_back(mkChat("621043678", "Camille",
+        L("Say 8pm at the harbour? \xF0\x9F\x8E\x89", "On dit 20h au Vieux Port ? \xF0\x9F\x8E\x89"),
+        now - 4 * MIN, false));
+    m.chats.push_back(mkChat("633728194", L("Dad", "Papa"),
+        L("Got it, thanks son \xF0\x9F\x91\x8D", "Bien recu, merci fiston \xF0\x9F\x91\x8D"),
+        now - 52 * MIN, false));
+    m.chats.push_back(mkChat("677301582", "Lucie",
+        L("I'll bring dessert \xE2\x9C\xA8", "J'apporte le dessert \xE2\x9C\xA8"),
+        now - 3 * H, true));
+    m.chats.push_back(mkChat("606459217", "Antoine B.",
+        L("PCB v2 went to production \xF0\x9F\x94\xA5", "Le PCB v2 est parti en prod \xF0\x9F\x94\xA5"),
+        now - 26 * H, false));
+    m.chats.push_back(mkChat("688112430", L("Mom", "Maman"),
+        L("Call me when you can \xE2\x9D\xA4", "Appelle-moi quand tu peux \xE2\x9D\xA4"),
+        now - 2 * D, false));
     m.chats[2].lastFromMe = true;
-    // Non-lus : Camille (récente) et Maman.
+    m.chats[3].alias = L("Antoine (work)", "Antoine (boulot)");  // alias local
     for (auto& c : m.chats) m.seen[c.key] = c.lastDate;
     m.seen[m.chats[0].key] = 0;
     m.seen[m.chats[4].key] = 0;
 
     m.msgs.clear();
-    m.msgs.push_back(mkMsg("Tu fais quoi ce soir ?", now - 61 * MIN, false));
-    m.msgs.push_back(mkMsg("Rien de prevu, pourquoi ?", now - 58 * MIN, true));
-    m.msgs.push_back(mkMsg("On se fait une bouillabaisse avec Lucie et Antoine 😄", now - 24 * MIN, false));
-    m.msgs.push_back(mkMsg("Grosse journee, j'ai flashe le firmware 12 fois 😅", now - 22 * MIN, true));
-    m.msgs.back().taps[3] = 1;  // 😂 sur le message envoyé
-    m.msgs.push_back(mkMsg("Raison de plus pour venir !", now - 20 * MIN, false));
-    m.msgs.push_back(mkMsg("Ok je passe vers 19h30 👍", now - 6 * MIN, true));
-    m.msgs.back().taps[0] = 2;  // ❤️ ×2
-    m.msgs.push_back(mkMsg("On dit 20h au Vieux Port ? 🎉", now - 4 * MIN, false));
-
-    m.chats[3].alias = "Antoine (boulot)";  // alias local : prioritaire sur le titre
+    m.msgs.push_back(mkMsg(L("What are you up to tonight?", "Tu fais quoi ce soir ?"),
+                           now - 61 * MIN, false));
+    m.msgs.push_back(mkMsg(L("Nothing planned, why?", "Rien de prevu, pourquoi ?"),
+                           now - 58 * MIN, true));
+    m.msgs.push_back(mkMsg(L("Dinner with Lucie and Antoine \xF0\x9F\x98\x84",
+                             "On se fait une bouillabaisse avec Lucie \xF0\x9F\x98\x84"),
+                           now - 24 * MIN, false));
+    m.msgs.push_back(mkMsg(L("Long day, flashed the firmware 12 times \xF0\x9F\x98\x85",
+                             "Grosse journee, j'ai flashe 12 fois \xF0\x9F\x98\x85"),
+                           now - 22 * MIN, true));
+    m.msgs.back().taps[3] = 1;  // \xF0\x9F\x98\x82 sur le message envoyé
+    m.msgs.push_back(mkMsg(L("All the more reason to come!", "Raison de plus pour venir !"),
+                           now - 20 * MIN, false));
+    m.msgs.push_back(mkMsg(L("Ok, see you at 7.30 \xF0\x9F\x91\x8D",
+                             "Ok je passe vers 19h30 \xF0\x9F\x91\x8D"),
+                           now - 6 * MIN, true));
+    m.msgs.back().taps[0] = 2;  // coeur x2
+    m.msgs.push_back(mkMsg(L("Say 8pm at the harbour? \xF0\x9F\x8E\x89",
+                             "On dit 20h au Vieux Port ? \xF0\x9F\x8E\x89"),
+                           now - 4 * MIN, false));
 
     UiNet n1; n1.ssid = "HomeWiFi";        n1.rssi = -48; n1.secure = true;
     UiNet n2; n2.ssid = "Livebox-C4F2";    n2.rssi = -61; n2.secure = true;
@@ -129,7 +154,7 @@ void fillDemo(UiModel& m) {
 
     m.curChatTitle = "Camille";
     m.curChatKey = "p:621043678";
-    m.compose = "J'arrive vers 19h30 🎉";
+    m.compose = L("On my way, 7.30 \xF0\x9F\x8E\x89", "J'arrive vers 19h30 \xF0\x9F\x8E\x89");
 
     m.battery = 84;
     m.wifiOk = true;
@@ -467,7 +492,8 @@ int runFrames(const std::string& dir, int n) {
     m.msgs.pop_back();
     m.screen = SCR_MESSAGES;
     m.compose = "";
-    const String typed = "J'arrive vers 19h30 ";  // l'émoji est ajouté d'un bloc
+    const String typed = (gLang == LANG_FR) ? "J'arrive vers 19h30 "
+                                           : "On my way, 7.30 ";  // émoji ajouté d'un bloc
 
     char name[64];
     for (int f = 0; f < n; f++) {
