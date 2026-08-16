@@ -13,6 +13,25 @@ the server's REST API over HTTPS, shows your conversations as real chat
 bubbles, and sends messages from its physical keyboard. No app, no account,
 no cloud in between — your Mac and your device.
 
+> ### ⚠️ Read this first — you need a BlueBubbles server
+> This firmware is a **client**. On its own it messages nobody. It needs
+> the free, open-source [BlueBubbles server](https://bluebubbles.app/install/)
+> running on a **Mac (or Hackintosh / macOS VM) signed into iMessage**,
+> reachable from the Cardputer over LAN or HTTPS. Set that up first —
+> about ten minutes, well documented — then flash this.
+>
+> Validated against BlueBubbles server **v1.9.9** (current at the time of
+> writing). Older servers may work; they are untested.
+
+> ### 🚧 Work in progress — your setup is the missing test
+> This runs daily against exactly **one** setup: a Cardputer ADV, a
+> BlueBubbles v1.9.9 server behind Cloudflare, French phone numbers. That
+> is one data point. If you try it — other country codes, group-heavy
+> accounts, self-signed TLS, ngrok, the original Cardputer —
+> [open an issue](https://github.com/chatelp/silicon-bubbles-cardputeradv/issues)
+> and say what worked and what didn't. Right now, reports from setups
+> unlike mine are worth more than any feature.
+
 ![Type, send, get a tapback, get a reply](docs/images/loop.gif)
 
 > Every image here comes straight from the simulator — never a mockup.
@@ -106,10 +125,10 @@ is how correctness gets proven.
 
 ## Requirements
 
-- A working BlueBubbles server (Mac + iMessage), reachable over LAN or
-  HTTPS (Cloudflare, ngrok, dynamic DNS)
+- A working **BlueBubbles server v1.9.9** — see the box at the top; LAN or
+  HTTPS (Cloudflare, ngrok, dynamic DNS all fine)
 - An M5Stack **Cardputer ADV** — the original Cardputer should work, same
-  library, but is untested
+  library, but is untested (a report either way would help!)
 
 ---
 

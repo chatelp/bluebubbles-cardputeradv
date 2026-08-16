@@ -13,6 +13,28 @@ interroge son API REST en HTTPS, affiche les conversations en vraies bulles
 et envoie des messages depuis son clavier physique. Pas d'application, pas
 de compte, pas de nuage au milieu — votre Mac et votre appareil.
 
+> ### ⚠️ À lire d'abord — il vous faut un serveur BlueBubbles
+> Ce firmware est un **client**. Seul, il n'envoie de message à personne.
+> Il lui faut le [serveur BlueBubbles](https://bluebubbles.app/install/)
+> (gratuit, open source) sur un **Mac — ou Hackintosh / VM macOS —
+> connecté à iMessage**, joignable depuis le Cardputer en réseau local ou
+> en HTTPS. Installez-le d'abord — dix minutes, bien documenté — puis
+> flashez ceci.
+>
+> Fonctionnement validé avec le serveur BlueBubbles **v1.9.9** (le plus
+> récent à ce jour). Les serveurs plus anciens peuvent marcher ; non testés.
+
+> ### 🚧 En chantier — votre installation est le test qui manque
+> Ce firmware tourne au quotidien contre exactement **une** installation :
+> un Cardputer ADV, un serveur v1.9.9 derrière Cloudflare, des numéros
+> français. C'est un seul point de mesure. Si vous l'essayez — autres
+> indicatifs, comptes riches en groupes, TLS auto-signé, ngrok, Cardputer
+> d'origine —
+> [ouvrez un ticket](https://github.com/chatelp/silicon-bubbles-cardputeradv/issues)
+> en disant ce qui a marché et ce qui a coincé. En ce moment, un retour
+> d'une installation différente de la mienne vaut plus que n'importe
+> quelle fonctionnalité.
+
 ![Taper, envoyer, recevoir un tapback, recevoir la réponse](docs/images/loop.gif)
 
 > Chaque image de ce README sort du simulateur — jamais d'une maquette.
@@ -109,10 +131,11 @@ un écran de cette taille, ce banc d'essai est ce qui prouve la justesse.
 
 ## Prérequis
 
-- Un serveur BlueBubbles fonctionnel (Mac + iMessage), joignable en réseau
-  local ou en HTTPS (Cloudflare, ngrok, DNS dynamique)
+- Un serveur **BlueBubbles v1.9.9** fonctionnel — voir l'encadré du haut ;
+  réseau local ou HTTPS (Cloudflare, ngrok, DNS dynamique)
 - Un M5Stack **Cardputer ADV** — le Cardputer d'origine devrait convenir
-  (même bibliothèque), mais n'a pas été testé
+  (même bibliothèque), non testé (un retour, dans un sens ou l'autre,
+  aiderait !)
 
 ---
 

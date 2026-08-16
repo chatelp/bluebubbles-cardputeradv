@@ -165,7 +165,7 @@ void fillDemo(UiModel& m) {
     m.apPass = "bluebubbles";
     m.marker = now - 4 * MIN;
     m.synced = true;
-    m.version = "0.12.0";
+    m.version = "0.19.0";
 
     gConfig.serverUrl = "https://my-server.example.com";
     gConfig.histDepth = 10;
@@ -520,7 +520,9 @@ int runFrames(const std::string& dir, int n) {
             int after = t - (12 + (int)typed.length());
             if (after >= 6 && !m.msgs.back().taps[0]) m.msgs.back().taps[0] = 1;  // coeur
             if (after >= 14 && (int)m.msgs.size() == 7)
-                m.msgs.push_back(mkMsg("On dit 20h au Vieux Port ? \xF0\x9F\x8E\x89",
+                m.msgs.push_back(mkMsg(gLang == LANG_FR
+                                           ? "On dit 20h au Vieux Port ? \xF0\x9F\x8E\x89"
+                                           : "Say 8pm at the harbour? \xF0\x9F\x8E\x89",
                                        demoNow(), false));
         }
         uiRender(g, m);

@@ -21,7 +21,7 @@
 #include "config_portal.h"
 #include "sound.h"
 
-static const char* APP_VERSION = "0.3.0";
+static const char* APP_VERSION = "0.19.0";
 
 // ---------------------------------------------------------------------------
 // État global
