@@ -15,6 +15,7 @@ struct BBChat {
     String title;
     String lastText;
     String lastGuid;        // guid du dernier message absorbé (anti-double comptage)
+    String alias;           // nom local choisi par l'utilisateur (NVS, jamais serveur)
     int64_t lastDate = 0;   // ms epoch (horloge serveur)
     bool lastFromMe = false;
     float score = 0;        // score de calibration (récence + fréquence)

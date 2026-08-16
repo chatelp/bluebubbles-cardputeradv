@@ -161,6 +161,32 @@ envoi), endpoint /debug/conv, STORE_VER 3 (recalibration auto).
       (clavier ignoré) ; plein écran conservé pour la synchro initiale —
       validé sur l'appareil (doublon absorbé, interruption sans perte)
 
+## v0.17 — Mobilité : WiFi/serveur sur l'appareil, QR, SD, alias (2026-08-16) — flashé
+
+Cinq demandes PO d'un même mouvement — pouvoir vivre avec l'appareil hors
+de chez soi :
+
+- [x] **WiFi et serveur modifiables depuis l'appareil** : scan des réseaux
+      (asynchrone, tri par force, dédoublonnage, réseaux ouverts marqués),
+      éditeur de texte générique (masquage par caractère UTF-8), et le
+      chemin sûr du portail — copie, NVS, redémarrage (jamais de String
+      écrite dans gConfig à chaud)
+- [x] **QR de premier démarrage** (`OK` sur l'écran Setup) : format
+      `WIFI:T:WPA;…` — le téléphone rejoint l'AP en scannant, le portail
+      captif s'ouvre ensuite tout seul
+- [x] **QR « portail sur téléphone »** dans les réglages : `http://<ip>/`
+      à l'adresse courante (lib ricmoo/QRCode, version 4, modules 3 px sur
+      carte blanche)
+- [x] **Sauvegarde/restauration SD** (`/SiliconBubbles/` : config.json —
+      mots de passe en clair, dit dans le README —, chats.bin, names.bin,
+      marker.txt ; carte montée le temps de l'opération). Restauration
+      proposée au premier démarrage (`b`) si une sauvegarde existe
+- [x] **Noms de contacts locaux** (`n` sur une conversation) : le serveur
+      ne fournit pas les contacts du Mac ; alias en NVS (blob bbnames),
+      prioritaire sur le titre serveur, inclus dans la sauvegarde SD
+- [x] Réglages : 6 lignes d'action (WiFi, serveur, mot de passe, QR,
+      sauvegarde, restauration) ouvertes par `OK`
+
 ## v0.16 — Fenêtre de calibration élargie (2026-08-16) — flashé, validé
 
 Constat PO : « je n'ai que 4 conversations, c'est très peu ». La fenêtre de

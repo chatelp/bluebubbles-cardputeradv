@@ -8,12 +8,25 @@
 
 #include "bb_client.h"  // BBChat, BBMsg (et String via Arduino ou le shim hôte)
 
-enum Screen { SCR_SPLASH, SCR_SETUP, SCR_CHATS, SCR_MESSAGES, SCR_COMPOSE, SCR_INFO, SCR_SETTINGS };
+enum Screen {
+    SCR_SPLASH, SCR_SETUP, SCR_CHATS, SCR_MESSAGES, SCR_COMPOSE, SCR_INFO,
+    SCR_SETTINGS, SCR_WIFI_SCAN, SCR_TEXT_INPUT, SCR_QR
+};
 
 // Champs de l'écran Réglages — l'ordre est l'ordre d'affichage.
 enum SetField : uint8_t {
     SET_LANG, SET_VOL, SET_KEYS, SET_SEND, SET_RECV, SET_NOTIF,
-    SET_POLL, SET_HIST, SET_COUNT
+    SET_POLL, SET_HIST,
+    // Lignes d'ACTION (OK les ouvre) — modification réseau => redémarrage.
+    SET_WIFI, SET_SERVER, SET_SPASS, SET_QR, SET_BACKUP, SET_RESTORE,
+    SET_COUNT
+};
+
+// Un réseau vu par le scan WiFi.
+struct UiNet {
+    String ssid;
+    int rssi = 0;
+    bool secure = true;
 };
 
 struct UiModel {
@@ -45,6 +58,22 @@ struct UiModel {
 
     // Réglages
     int setSel = 0;
+
+    // Scan WiFi (SCR_WIFI_SCAN)
+    std::vector<UiNet> nets;
+    bool scanning = false;
+    int scanSel = 0;
+
+    // Éditeur de texte générique (SCR_TEXT_INPUT)
+    String editLabel;
+    String editValue;
+    bool editMask = false;
+
+    // Écran QR (SCR_QR)
+    String qrPayload, qrTitle, qrSub;
+
+    // Une sauvegarde SD est disponible (proposée au premier démarrage)
+    bool sdBackup = false;
 
     // Instantané matériel/réseau, rempli juste avant le rendu
     int battery = 100;

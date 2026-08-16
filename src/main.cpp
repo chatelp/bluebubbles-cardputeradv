@@ -14,6 +14,7 @@
 #include "bb_emoji.h"
 #include "bb_scroll.h"
 #include "bb_errors.h"
+#include "sd_backup.h"
 #include "i18n.h"
 #include "ui/render.h"
 #include "ui/theme.h"
@@ -146,8 +147,121 @@ static void setAdjust(uint8_t f, int delta) {
     sSetDirty = true;
 }
 
+// ---------------------------------------------------------------------------
+// Alias de contacts : le serveur ne fournit pas de noms (l'API contacts est
+// facultative côté Mac) — l'utilisateur nomme lui-même une conversation
+// (touche « n »), et le nom vit en NVS, prioritaire sur le titre serveur.
+// ---------------------------------------------------------------------------
+static std::map<String, String> sAlias;
+
+static void aliasLoad() {
+    Preferences p;
+    if (!p.begin("bbnames", true)) return;
+    size_t len = p.getBytesLength("v1");
+    if (!len || len > 4096) { p.end(); return; }
+    std::vector<uint8_t> b(len);
+    p.getBytes("v1", b.data(), len);
+    p.end();
+    size_t i = 0;
+    while (i + 2 <= len) {
+        uint8_t kn = b[i++];
+        if (i + kn > len) break;
+        String k;
+        for (uint8_t j = 0; j < kn; j++) k += (char)b[i + j];
+        i += kn;
+        if (i >= len) break;
+        uint8_t vn = b[i++];
+        if (i + vn > len) break;
+        String v;
+        for (uint8_t j = 0; j < vn; j++) v += (char)b[i + j];
+        i += vn;
+        if (k.length() && v.length()) sAlias[k] = v;
+    }
+}
+
+static void aliasSave() {
+    std::vector<uint8_t> b;
+    for (const auto& kv : sAlias) {
+        if (kv.first.length() > 40 || !kv.second.length()) continue;
+        uint8_t vn = kv.second.length() > 32 ? 32 : (uint8_t)kv.second.length();
+        while (vn > 0 && ((uint8_t)kv.second[vn] & 0xC0) == 0x80) vn--;  // frontière UTF-8
+        b.push_back((uint8_t)kv.first.length());
+        for (size_t j = 0; j < kv.first.length(); j++) b.push_back((uint8_t)kv.first[j]);
+        b.push_back(vn);
+        for (uint8_t j = 0; j < vn; j++) b.push_back((uint8_t)kv.second[j]);
+    }
+    Preferences p;
+    p.begin("bbnames", false);
+    if (b.empty()) p.remove("v1");
+    else p.putBytes("v1", b.data(), b.size());
+    p.end();
+}
+
+static void aliasApply() {
+    for (BBChat& c : sUi.chats) {
+        auto it = sAlias.find(c.key);
+        c.alias = (it != sAlias.end()) ? it->second : String();
+    }
+}
+
+// Cibles de l'éditeur de texte générique (SCR_TEXT_INPUT).
+enum EditTarget : uint8_t { EDIT_NONE, EDIT_WIFI_PASS, EDIT_SRV_URL, EDIT_SRV_PASS, EDIT_ALIAS };
+static EditTarget sEditTarget = EDIT_NONE;
+static String sEditSsid;    // réseau choisi au scan
+static String sEditChatKey; // conversation à renommer
+static Screen sEditBack = SCR_SETTINGS;
+
+static void showBootMessage(const String& msg);  // définie plus bas
+
+// Modification réseau/serveur : le chemin du portail — copie, NVS,
+// redémarrage. Jamais d'écriture de String dans gConfig à chaud.
+static void applyNetworkChange() {
+    AppConfig next = gConfig;
+    if (sEditTarget == EDIT_WIFI_PASS) {
+        next.wifiSsid = sEditSsid;
+        next.wifiPass = sUi.editValue;
+    } else if (sEditTarget == EDIT_SRV_URL) {
+        String u = sUi.editValue;
+        while (u.endsWith("/")) u.remove(u.length() - 1);
+        if (!u.startsWith("http")) {
+            sUi.status = bbErr(BB_E50_URL);
+            return;
+        }
+        next.serverUrl = u;
+    } else if (sEditTarget == EDIT_SRV_PASS) {
+        next.serverPass = sUi.editValue;
+    }
+    next.save();
+    showBootMessage(T(S_REBOOTING));
+    delay(600);
+    ESP.restart();
+}
+
+static void commitTextInput() {
+    if (sEditTarget == EDIT_ALIAS) {
+        if (sUi.editValue.length()) sAlias[sEditChatKey] = sUi.editValue;
+        else sAlias.erase(sEditChatKey);
+        aliasSave();
+        sUi.screen = SCR_CHATS;
+        return;
+    }
+    applyNetworkChange();  // ne revient que sur erreur de validation
+}
+
+static void openTextInput(EditTarget t, const String& label, const String& value,
+                          bool mask, Screen back) {
+    sEditTarget = t;
+    sEditBack = back;
+    sUi.editLabel = label;
+    sUi.editValue = value;
+    sUi.editMask = mask;
+    sUi.status = "";
+    sUi.screen = SCR_TEXT_INPUT;
+}
+
 static void render() {
     DataLock l;  // la tâche réseau peut modifier chats/messages/statut
+    aliasApply();  // bon marché (≤ 20 × ≤ 16 entrées), et toujours juste
     sUi.battery = M5Cardputer.Power.getBatteryLevel();
     sUi.wifiOk = WiFi.status() == WL_CONNECTED;
     sUi.rssi = (int)WiFi.RSSI();
@@ -897,6 +1011,21 @@ static void handleKeys() {
     DataLock l;  // navigation et composition touchent les données partagées
     sDirty = true;
 
+    if (sUi.screen == SCR_TEXT_INPUT) {
+        if (ks.enter) { commitTextInput(); return; }
+        if (ks.del && sUi.editValue.length()) {
+            int i = sUi.editValue.length() - 1;
+            while (i > 0 && (sUi.editValue[i] & 0xC0) == 0x80) i--;
+            sUi.editValue = sUi.editValue.substring(0, i);
+            return;
+        }
+        for (char c : ks.word) {
+            if (c == '`') { sUi.screen = sEditBack; sUi.status = ""; return; }
+            sUi.editValue += c;
+        }
+        return;
+    }
+
     if (sUi.screen == SCR_COMPOSE) {
         if (ks.enter) { sendCompose(); return; }
         if (ks.del && sUi.compose.length()) {
@@ -920,6 +1049,13 @@ static void handleKeys() {
                 if (c == ';' && sUi.chatSel > 0) sUi.chatSel--;
                 else if (c == '.' && sUi.chatSel < (int)sUi.chats.size() - 1) sUi.chatSel++;
                 else if (c == '`') sUi.screen = SCR_INFO;
+                else if (c == 'n' && !sUi.chats.empty()) {
+                    // Nom local : le serveur ne fournit pas de contacts.
+                    const BBChat& cc = sUi.chats[sUi.chatSel];
+                    sEditChatKey = cc.key;
+                    openTextInput(EDIT_ALIAS, String(T(S_CONTACT_NAME)) + " - " + cc.title,
+                                  cc.alias, false, SCR_CHATS);
+                }
                 else if (c == 'r')
                     sUi.status = requestCalibration() ? T(S_CALIBRATING) : T(S_BUSY_RETRY);
                 break;
@@ -933,6 +1069,33 @@ static void handleKeys() {
                 else if (c == 'p')
                     sUi.status = netEnqueue(NET_PING) ? T(S_TESTING_SERVER) : T(S_BUSY_RETRY);
                 else if (c == 's') { sUi.screen = SCR_SETTINGS; sUi.setSel = 0; sUi.status = ""; }
+                break;
+            case SCR_QR:
+                if (c == '`') sUi.screen = sEditBack;
+                break;
+            case SCR_WIFI_SCAN:
+                if (c == ';' && sUi.scanSel > 0) sUi.scanSel--;
+                else if (c == '.' && sUi.scanSel < (int)sUi.nets.size() - 1) sUi.scanSel++;
+                else if (c == 'r' && !sUi.scanning) {
+                    sUi.nets.clear();
+                    sUi.scanning = true;
+                    WiFi.scanNetworks(true);
+                } else if (c == '`') {
+                    WiFi.scanDelete();
+                    sUi.scanning = false;
+                    sUi.screen = SCR_SETTINGS;
+                }
+                break;
+            case SCR_SETUP:
+                if (c == 'b' && sUi.sdBackup) {
+                    String err;
+                    if (sdBackupRestore(err)) {
+                        showBootMessage(T(S_REBOOTING));
+                        delay(600);
+                        ESP.restart();
+                    }
+                    sUi.status = err;
+                }
                 break;
             case SCR_SETTINGS:
                 // ; / . parcourent les champs, , et / changent la valeur.
@@ -955,6 +1118,66 @@ static void handleKeys() {
         }
     }
     if (ks.enter) {
+        if (sUi.screen == SCR_SETUP) {
+            sEditBack = SCR_SETUP;
+            sUi.qrPayload = "WIFI:T:WPA;S:" + ConfigPortal::apSsid() + ";P:" +
+                            ConfigPortal::apPass() + ";;";
+            sUi.qrTitle = T(S_QR_JOIN_T);
+            sUi.qrSub = T(S_QR_JOIN_S);
+            sUi.screen = SCR_QR;
+            return;
+        }
+        if (sUi.screen == SCR_WIFI_SCAN && !sUi.scanning && !sUi.nets.empty()) {
+            const UiNet& n = sUi.nets[sUi.scanSel];
+            sEditSsid = n.ssid;
+            if (n.secure) {
+                openTextInput(EDIT_WIFI_PASS, String(T(S_PASS_FOR)) + n.ssid, "",
+                              true, SCR_WIFI_SCAN);
+            } else {
+                sEditTarget = EDIT_WIFI_PASS;
+                sUi.editValue = "";
+                applyNetworkChange();
+            }
+            return;
+        }
+        if (sUi.screen == SCR_SETTINGS) {
+            String err;
+            switch (sUi.setSel) {
+                case SET_WIFI:
+                    sUi.nets.clear();
+                    sUi.scanSel = 0;
+                    sUi.scanning = true;
+                    sUi.screen = SCR_WIFI_SCAN;
+                    WiFi.scanNetworks(true);
+                    break;
+                case SET_SERVER:
+                    openTextInput(EDIT_SRV_URL, T(S_SET_SERVER), gConfig.serverUrl,
+                                  false, SCR_SETTINGS);
+                    break;
+                case SET_SPASS:
+                    openTextInput(EDIT_SRV_PASS, T(S_SET_SPASS), "", true, SCR_SETTINGS);
+                    break;
+                case SET_QR:
+                    sEditBack = SCR_SETTINGS;
+                    sUi.qrPayload = "http://" + WiFi.localIP().toString() + "/";
+                    sUi.qrTitle = T(S_QR_PORTAL_T);
+                    sUi.qrSub = T(S_QR_PORTAL_S);
+                    sUi.screen = SCR_QR;
+                    break;
+                case SET_BACKUP:
+                    sUi.status = sdBackupSave(err) ? T(S_SD_SAVED) : err;
+                    break;
+                case SET_RESTORE:
+                    if (sdBackupRestore(err)) {
+                        showBootMessage(T(S_REBOOTING));
+                        delay(600);
+                        ESP.restart();
+                    }
+                    sUi.status = err;
+                    break;
+            }
+            return;
+        }
         if (sUi.screen == SCR_CHATS) { if (!sUi.calibrating) openChat(sUi.chatSel); }
         else if (sUi.screen == SCR_MESSAGES) { sUi.screen = SCR_COMPOSE; sUi.statusView = ""; }
     }
@@ -1014,9 +1237,11 @@ void setup() {
     sNetQueue = xQueueCreate(6, sizeof(NetCmd));
     xTaskCreatePinnedToCore(netTask, "net", 16384, nullptr, 1, nullptr, 0);
 
+    aliasLoad();
     if (!gConfig.hasWifi()) {
         ConfigPortal::startAP();
         sUi.screen = SCR_SETUP;
+        sUi.sdBackup = sdBackupExists();  // une sauvegarde ? proposer « b »
         render();
         return;
     }
@@ -1120,6 +1345,36 @@ void loop() {
         sSendBackup = "";
         sSendBackupGuid = "";
         sDirty = true;
+    }
+    if (sUi.screen == SCR_WIFI_SCAN && sUi.scanning) {
+        int n = WiFi.scanComplete();
+        if (n >= 0) {
+            DataLock l;
+            sUi.nets.clear();
+            for (int i = 0; i < n && (int)sUi.nets.size() < 20; i++) {
+                String ssid = WiFi.SSID(i);
+                if (!ssid.length()) continue;
+                bool dup = false;
+                for (UiNet& e : sUi.nets)
+                    if (e.ssid == ssid) {  // même nom : garde le plus fort
+                        if (WiFi.RSSI(i) > e.rssi) e.rssi = WiFi.RSSI(i);
+                        dup = true;
+                        break;
+                    }
+                if (dup) continue;
+                UiNet un;
+                un.ssid = ssid;
+                un.rssi = WiFi.RSSI(i);
+                un.secure = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
+                sUi.nets.push_back(un);
+            }
+            std::sort(sUi.nets.begin(), sUi.nets.end(),
+                      [](const UiNet& a, const UiNet& b) { return a.rssi > b.rssi; });
+            WiFi.scanDelete();
+            sUi.scanning = false;
+            sUi.scanSel = 0;
+            sDirty = true;
+        }
     }
     if (sUi.screen == SCR_SPLASH) {
         // Fin de la première synchro : place aux conversations. Et tant que

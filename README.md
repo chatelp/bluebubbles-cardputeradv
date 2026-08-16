@@ -36,13 +36,27 @@ On first boot the device raises an access point — join `SiliconBubbles`
 (password `bluebubbles`) and open `http://192.168.4.1`. Afterwards the
 same form lives at `http://cardputer.local` on your network.
 
-WiFi, server address and passwords are **portal only**: the network task
-reads the configuration continuously on the other core, and reassigning a
-string from the UI core would crash it. Everything numeric — language,
-volume, the four sound switches, refresh rate, history depth — is also
-editable on the device itself, and the two paths cannot overwrite each
-other silently: the portal refuses (HTTP 409) a form rendered before a
-setting changed on the device.
+Everything is also editable **on the device itself** (Info → `s`):
+numeric settings change live; WiFi (with a **network scan** — pick from a
+list, type the password) and server address/password go through the same
+safe path as the portal — saved to a copy, then the device restarts. The
+two paths cannot overwrite each other silently: the portal refuses
+(HTTP 409) a form rendered before a setting changed on the device.
+
+**QR codes** do the heavy lifting on a phone: the first-boot screen shows
+a QR that joins the setup WiFi directly (`OK` key), and the settings offer
+a QR that opens the portal at the device's current address.
+
+**SD backup** (settings → Backup to SD): configuration, pinned
+conversations, sync marker and contact names go to `/SiliconBubbles/` on
+the microSD card — flashing a firmware never has to cost your setup
+again, and a fresh device offers to restore it at first boot (`b`).
+Passwords are stored **in clear** on the card: it is your card, treat it
+accordingly.
+
+**Contact names**: BlueBubbles does not push the Mac's contacts, so the
+list shows raw numbers. Press `n` on a conversation to give it a local
+name — stored on the device, backed up to SD, never sent anywhere.
 
 Your server password lives only in the device's NVS. It is never a
 firmware default and never enters this repository.
@@ -58,6 +72,8 @@ firmware default and never enters this repository.
 | `Enter` | open | write | send | — |
 | `` ` `` | info | back | cancel | save and exit |
 | `r` | resync | — | — | — |
+| `n` | name the contact | — | — | — |
+| `Enter` *(settings)* | | | | open: WiFi scan, server, QR, SD backup |
 | `p` / `s` | *(info screen)* test server / settings | | | |
 
 ---

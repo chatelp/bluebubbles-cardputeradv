@@ -36,13 +36,30 @@ Au premier démarrage l'appareil ouvre un point d'accès : rejoignez
 `SiliconBubbles` (mot de passe `bluebubbles`) et ouvrez `http://192.168.4.1`.
 Ensuite, le même formulaire vit sur `http://cardputer.local`.
 
-WiFi, adresse du serveur et mots de passe sont **réservés au portail** : la
-tâche réseau lit la configuration en permanence sur l'autre cœur, et
-réaffecter une chaîne depuis le cœur de l'interface la ferait planter. Tout
-ce qui est numérique — langue, volume, les quatre interrupteurs de son,
-rythme, profondeur d'historique — se règle aussi sur l'appareil, et les deux
-chemins ne peuvent pas s'écraser en silence : le portail refuse (HTTP 409)
-un formulaire rendu avant qu'un réglage ne change sur l'appareil.
+Tout se règle aussi **sur l'appareil** (Infos → `s`) : les réglages
+numériques changent à chaud ; le WiFi (avec **scan des réseaux** — choisir
+dans une liste, taper le mot de passe) et l'adresse/mot de passe du serveur
+empruntent le même chemin sûr que le portail — enregistrés sur une copie,
+puis l'appareil redémarre. Les deux chemins ne peuvent pas s'écraser en
+silence : le portail refuse (HTTP 409) un formulaire rendu avant qu'un
+réglage ne change sur l'appareil.
+
+**Les QR codes** font travailler le téléphone : l'écran de premier
+démarrage affiche un QR qui fait rejoindre le WiFi d'installation
+(touche `OK`), et les réglages proposent un QR qui ouvre le portail à
+l'adresse actuelle de l'appareil.
+
+**Sauvegarde SD** (réglages → Sauvegarde sur SD) : configuration,
+conversations épinglées, marqueur de synchro et noms de contacts partent
+dans `/SiliconBubbles/` sur la microSD — flasher un firmware ne coûte plus
+jamais votre configuration, et un appareil vierge propose la restauration
+au premier démarrage (`b`). Les mots de passe y sont **en clair** : c'est
+votre carte, traitez-la comme telle.
+
+**Noms de contacts** : BlueBubbles ne pousse pas les contacts du Mac, la
+liste affiche donc des numéros bruts. `n` sur une conversation lui donne
+un nom local — stocké sur l'appareil, sauvegardé sur SD, jamais envoyé
+nulle part.
 
 Le mot de passe de votre serveur ne vit qu'en NVS sur l'appareil. Il n'est
 jamais une valeur par défaut du firmware et n'entre jamais dans ce dépôt.
@@ -58,6 +75,8 @@ jamais une valeur par défaut du firmware et n'entre jamais dans ce dépôt.
 | `Entrée` | ouvrir | écrire | envoyer | — |
 | `` ` `` | infos | retour | annuler | enregistrer et sortir |
 | `r` | resynchroniser | — | — | — |
+| `n` | nommer le contact | — | — | — |
+| `Entrée` *(réglages)* | | | | ouvrir : scan WiFi, serveur, QR, sauvegarde SD |
 | `p` / `s` | *(écran Infos)* tester le serveur / réglages | | | |
 
 ---

@@ -11,6 +11,8 @@
 #include "bb_emoji.h"
 #include "bb_scroll.h"
 #include "emoji_art.h"
+#include <qrcode.h>
+
 #include "bb_errors.h"
 #include "i18n.h"
 #include "theme.h"
@@ -279,6 +281,11 @@ static void drawSetup() {
     step("1", T(S_SETUP_WIFI) + M->apSsid, T(S_SETUP_PASS) + M->apPass);
     step("2", "http://192.168.4.1", "");
     step("3", T(S_SETUP_FILL), T(S_SETUP_REBOOT));
+    if (M->sdBackup) {
+        C->setTextColor(C_AMBER400, C_INK900);
+        C->setCursor(8, y);
+        C->print(fitText(T(S_SETUP_RESTORE), SCREEN_W - 16));
+    }
     drawHintBar(T(S_PORTAL_OPEN));
     drawStatusLine(M->status);
 }
@@ -437,7 +444,8 @@ static void drawChats() {
         C->setFont(&fonts::Font0);
         int tsW = C->textWidth(ts);
         C->setFont(&fonts::efontJA_12);
-        drawRich(nx, y + 2, fitText(c.title, SCREEN_W - nx - tsW - 12),
+        const String& shownTitle = c.alias.length() ? c.alias : c.title;
+        drawRich(nx, y + 2, fitText(shownTitle, SCREEN_W - nx - tsW - 12),
                  unread ? C_WHITE : C_SLATE200, bg);
 
         C->setFont(&fonts::Font0);
@@ -712,6 +720,111 @@ static void drawMessages(bool composeMode) {
     drawStatusLine(M->statusView);
 }
 
+// Scan WiFi : les réseaux triés par force, barres de signal par ligne.
+static void drawWifiScan() {
+    C->fillSprite(C_INK900);
+    drawTopBar(T(S_SCAN_TITLE));
+    if (M->scanning || M->nets.empty()) {
+        C->setTextColor(C_SLATE300, C_INK900);
+        String t = T(M->scanning ? S_SCANNING : S_NO_NETWORKS);
+        C->setCursor((SCREEN_W - C->textWidth(t)) / 2, 60);
+        C->print(t);
+        drawHintBar(T(S_HINT_SCAN));
+        return;
+    }
+    const int rowH = 15, visible = 6;
+    if (M->scanSel >= (int)M->nets.size()) M->scanSel = (int)M->nets.size() - 1;
+    if (M->scanSel < 0) M->scanSel = 0;
+    int top = M->scanSel >= visible ? M->scanSel - visible + 1 : 0;
+    int y = BAR_H + 2;
+    for (int i = top; i < (int)M->nets.size() && i < top + visible; i++) {
+        const UiNet& n = M->nets[i];
+        bool sel = (i == M->scanSel);
+        uint16_t bg = sel ? C_INK600 : C_INK900;
+        if (sel) {
+            C->fillRect(0, y - 1, SCREEN_W, rowH, C_INK600);
+            C->fillRect(0, y - 1, 2, rowH, C_BLUE400);
+        }
+        C->setTextColor(sel ? C_WHITE : C_SLATE200, bg);
+        C->setCursor(7, y);
+        C->print(fitText(n.ssid, 170));
+        int bars = n.rssi >= -55 ? 4 : n.rssi >= -65 ? 3 : n.rssi >= -75 ? 2 : 1;
+        for (int b = 0; b < 4; b++) {
+            int h = 3 + b * 2;
+            C->fillRect(214 + b * 4, y + 10 - h, 2, h, b < bars ? C_SLATE300 : C_INK600);
+        }
+        if (!n.secure) {
+            C->setFont(&fonts::Font0);
+            C->setTextColor(C_AMBER400, bg);
+            C->setCursor(180, y + 2);
+            C->print(upperLabel(T(S_OPEN_NET)));
+            C->setFont(&fonts::efontJA_12);
+        }
+        y += rowH;
+    }
+    drawHintBar(T(S_HINT_SCAN));
+    drawStatusLine(M->status);
+}
+
+// Éditeur de texte générique : un libellé, un champ, le clavier fait le reste.
+static void drawTextInput() {
+    C->fillSprite(C_INK900);
+    drawTopBar(T(S_SETTINGS));
+    C->setTextColor(C_SLATE300, C_INK900);
+    C->setCursor(8, 30);
+    C->print(fitText(M->editLabel, SCREEN_W - 16));
+    C->fillRoundRect(6, 50, SCREEN_W - 12, 20, 6, C_INK700);
+    C->drawRoundRect(6, 50, SCREEN_W - 12, 20, 6, C_BLUE400);
+    String shown = M->editValue;
+    if (M->editMask) {
+        String m2;
+        size_t i = 0;
+        while (i < shown.length()) {  // un point par CARACTÈRE, pas par octet
+            uint8_t c = shown[i];
+            i += (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 1;
+            m2 += "*";
+        }
+        shown = m2;
+    }
+    while (richWidth(shown) > SCREEN_W - 32 && shown.length())
+        shown = shown.substring(1);
+    drawRich(12, 54, shown, C_WHITE, C_INK700);
+    C->fillRect(12 + richWidth(shown) + 1, 54, 1, 12, C_BLUE400);
+    drawHintBar(T(S_HINT_INPUT));
+    drawStatusLine(M->status);
+}
+
+// Écran QR : modules sombres sur carte blanche (les lecteurs y tiennent),
+// titre et mode d'emploi à droite.
+static void drawQrScreen() {
+    C->fillSprite(C_INK900);
+    QRCode qr;
+    static uint8_t qrbuf[200];  // version 4 : 33x33, buffer ~137 o
+    int ok = qrcode_initText(&qr, qrbuf, 4, ECC_LOW, M->qrPayload.c_str());
+    const int scale = 3;
+    int size = qr.size * scale;                      // 99 px en version 4
+    int qx = 8, qy = (SCREEN_H - size) / 2;
+    if (ok == 0) {
+        C->fillRoundRect(qx - 5, qy - 5, size + 10, size + 10, 4, C_WHITE);
+        for (int yy = 0; yy < qr.size; yy++)
+            for (int xx = 0; xx < qr.size; xx++)
+                if (qrcode_getModule(&qr, xx, yy))
+                    C->fillRect(qx + xx * scale, qy + yy * scale, scale, scale, C_INK900);
+    }
+    int tx = qx + size + 14;
+    C->setTextColor(C_WHITE, C_INK900);
+    std::vector<String> tl;
+    wrapText(M->qrTitle, SCREEN_W - tx - 4, tl);
+    int y = 22;
+    for (const String& l : tl) { C->setCursor(tx, y); C->print(l); y += 13; }
+    y += 4;
+    C->setTextColor(C_SLATE300, C_INK900);
+    std::vector<String> sl;
+    wrapText(M->qrSub, SCREEN_W - tx - 4, sl);
+    for (const String& l : sl) { C->setCursor(tx, y); C->print(l); y += 13; }
+    drawHintBar(T(S_HINT_QR));
+}
+
 static void drawInfo() {
     C->fillSprite(C_INK900);
     drawTopBar(T(S_INFO));
@@ -750,6 +863,17 @@ static String setValueText(uint8_t f) {
         case SET_NOTIF: return T(gConfig.sndNotif ? S_ON : S_OFF);
         case SET_POLL:  return String(gConfig.pollSec) + " s";
         case SET_HIST:  return String(gConfig.histDepth) + " " + T(S_MESSAGES_UNIT);
+        case SET_WIFI:  return M->ssid;
+        case SET_SERVER: {
+            String u = gConfig.serverUrl;
+            u.replace("https://", "");
+            u.replace("http://", "");
+            return u;
+        }
+        case SET_SPASS: return gConfig.serverPass.length() ? "****" : "-";
+        case SET_QR:
+        case SET_BACKUP:
+        case SET_RESTORE: return ">";
     }
     return "";
 }
@@ -764,6 +888,12 @@ static StrId setLabel(uint8_t f) {
         case SET_NOTIF: return S_SND_NOTIF;
         case SET_POLL:  return S_POLL;
         case SET_HIST:  return S_HISTORY;
+        case SET_WIFI:  return S_SET_WIFI;
+        case SET_SERVER: return S_SET_SERVER;
+        case SET_SPASS: return S_SET_SPASS;
+        case SET_QR:    return S_SET_QR;
+        case SET_BACKUP: return S_SET_BACKUP;
+        case SET_RESTORE: return S_SET_RESTORE;
     }
     return S_SETTINGS;
 }
@@ -821,6 +951,9 @@ void uiRender(BbCanvas& canvas, UiModel& m) {
         case SCR_COMPOSE:  drawMessages(true); break;
         case SCR_INFO:     drawInfo(); break;
         case SCR_SETTINGS: drawSettings(); break;
+        case SCR_WIFI_SCAN:  drawWifiScan(); break;
+        case SCR_TEXT_INPUT: drawTextInput(); break;
+        case SCR_QR:         drawQrScreen(); break;
     }
 }
 

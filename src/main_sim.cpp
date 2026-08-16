@@ -118,6 +118,15 @@ void fillDemo(UiModel& m) {
     m.msgs.back().taps[0] = 2;  // ❤️ ×2
     m.msgs.push_back(mkMsg("On dit 20h au Vieux Port ? 🎉", now - 4 * MIN, false));
 
+    m.chats[3].alias = "Antoine (boulot)";  // alias local : prioritaire sur le titre
+
+    UiNet n1; n1.ssid = "HomeWiFi";        n1.rssi = -48; n1.secure = true;
+    UiNet n2; n2.ssid = "Livebox-C4F2";    n2.rssi = -61; n2.secure = true;
+    UiNet n3; n3.ssid = "Hotel_Guests";    n3.rssi = -70; n3.secure = false;
+    UiNet n4; n4.ssid = "freebox_pro";     n4.rssi = -82; n4.secure = true;
+    m.nets = {n1, n2, n3, n4};
+    m.scanSel = 1;
+
     m.curChatTitle = "Camille";
     m.curChatKey = "p:621043678";
     m.compose = "J'arrive vers 19h30 🎉";
@@ -204,6 +213,22 @@ int runScreens(const std::string& dir) {
     m.calibrating = false;
     fillDemo(m);
     m.screen = SCR_SETUP;    shot("09-setup");
+    m.screen = SCR_WIFI_SCAN;
+    shot("12-wifi-scan");
+    m.screen = SCR_TEXT_INPUT;
+    m.editLabel = String(T(S_PASS_FOR)) + "Livebox-C4F2";
+    m.editValue = "abc123";
+    m.editMask = true;
+    shot("13-text-input");
+    m.screen = SCR_QR;
+    m.qrPayload = "WIFI:T:WPA;S:SiliconBubbles;P:bluebubbles;;";
+    m.qrTitle = T(S_QR_JOIN_T);
+    m.qrSub = T(S_QR_JOIN_S);
+    shot("14-qr-join");
+    m.qrPayload = "http://192.168.1.30/";
+    m.qrTitle = T(S_QR_PORTAL_T);
+    m.qrSub = T(S_QR_PORTAL_S);
+    shot("15-qr-portal");
     m.screen = SCR_SPLASH;
     m.calibrating = true; m.calibPage = 12; m.calibTotal = 30; m.synced = false;
     shot("10-splash-sync");
