@@ -228,6 +228,70 @@ static void drawSetup() {
     drawStatusLine(M->status);
 }
 
+// Écran d'accueil : la marque, puis les trois étapes du premier contact —
+// WiFi, serveur, synchro. Il vit du démarrage jusqu'à la première liste ;
+// les états se déduisent du modèle, rien n'est mis en scène.
+static void drawSplash() {
+    C->fillSprite(C_INK900);
+
+    // La bulle « en train d'écrire » : le logo est le produit lui-même.
+    const int bw = 46, bh = 30;
+    const int bx = (SCREEN_W - bw) / 2, by = 14;
+    C->fillRoundRect(bx, by, bw, bh, 10, C_BLUE500);
+    C->fillTriangle(bx + 7, by + bh - 1, bx + 1, by + bh + 6, bx + 17, by + bh - 1, C_BLUE500);
+    int phase = (int)((millis() / 280) % 3);
+    for (int d = 0; d < 3; d++)
+        C->fillCircle(bx + 13 + d * 10, by + bh / 2, d == phase ? 3 : 2,
+                      d == phase ? C_WHITE : 0xB5FE);
+
+    C->setTextColor(C_WHITE, C_INK900);
+    String t1 = "BlueBubbles Cardputer";
+    C->setCursor((SCREEN_W - C->textWidth(t1)) / 2, 58);
+    C->print(t1);
+
+    // Les trois étapes, séparées par des chevrons. Fait = bleu, en cours =
+    // blanc (avec les points animés de la bulle), à venir = gris.
+    bool wifiDone = M->wifiOk;
+    bool serverDone = M->calibPage > 1 || M->synced;
+    bool syncDone = M->synced || (!M->calibrating && !M->chats.empty());
+    int cur = !wifiDone ? 0 : !serverDone ? 1 : 2;
+    const char* labels[3] = {"WiFi", T(S_SERVER), T(S_SYNC)};
+    bool done[3] = {wifiDone, serverDone, syncDone};
+    int total = C->textWidth(labels[0]) + C->textWidth(labels[1]) + C->textWidth(labels[2]) + 2 * 14;
+    int x = (SCREEN_W - total) / 2;
+    for (int i = 0; i < 3; i++) {
+        uint16_t col = done[i] ? C_BLUE400 : (i == cur ? C_WHITE : C_SLATE300);
+        C->setTextColor(col, C_INK900);
+        C->setCursor(x, 78);
+        C->print(labels[i]);
+        x += C->textWidth(labels[i]);
+        if (i < 2) {
+            C->setTextColor(C_SLATE300, C_INK900);
+            C->setCursor(x + 4, 78);
+            C->print(">");
+            x += 14;
+        }
+    }
+
+    // Pendant la calibration : la même barre honnête que partout ailleurs.
+    if (M->calibrating) {
+        C->fillRoundRect(50, 98, 140, 5, 2, C_INK700);
+        int tot = M->calibTotal ? M->calibTotal : 1;
+        int w = 140 * min((int)M->calibPage, tot) / tot;
+        if (w > 0) C->fillRoundRect(50, 98, w, 5, 2, C_BLUE400);
+        String p = String(T(S_PAGE)) + " " + (int)M->calibPage + " / " + tot;
+        C->setTextColor(C_SLATE300, C_INK900);
+        C->setCursor((SCREEN_W - C->textWidth(p)) / 2, 106);
+        C->print(p);
+    }
+
+    String v = String("v") + M->version;
+    C->setTextColor(C_INK600, C_INK900);
+    C->setCursor((SCREEN_W - C->textWidth(v)) / 2, SCREEN_H - 13);
+    C->print(v);
+    drawStatusLine(M->status);
+}
+
 // Plein écran de calibration : le seul moment où il n'y a effectivement rien
 // à montrer. Progression déterministe (le nombre de pages est connu).
 static void drawCalibrating() {
@@ -659,6 +723,7 @@ void uiRender(BbCanvas& canvas, UiModel& m) {
     C->setTextFont(&fonts::efontJA_12);
     C->setTextSize(1);
     switch (M->screen) {
+        case SCR_SPLASH:   drawSplash(); break;
         case SCR_SETUP:    drawSetup(); break;
         // Plein écran de calibration si la liste est vide (synchro initiale) ;
         // sinon la liste en cache reste visible sous le modal de progression.

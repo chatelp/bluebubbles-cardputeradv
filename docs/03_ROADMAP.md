@@ -163,6 +163,16 @@ envoi), endpoint /debug/conv, STORE_VER 3 (recalibration auto).
 
 ## v0.13 — Modularisation et simulateur (2026-08-16) — flashé
 
+- [x] **Splash screen** : logo bulle « en train d'écrire » (points animés),
+      étapes WiFi › serveur › synchro déduites du modèle, barre de
+      progression de la première calibration, version — il vit du démarrage
+      à la première liste (chemin rapide : liste NVS immédiate, sans splash)
+- [x] **Barres de signal WiFi** type téléphone (0-4 selon RSSI) dans la
+      barre supérieure, échelle en creux toujours lisible
+- [x] Trois **esquisses de direction visuelle** rendues par le vrai moteur
+      (`--mocks`) : matière et profondeur / rétro-communicateur / terminal
+      phosphore — décision PO en cours
+
 - [x] **Fin du monolithe** : le rendu sort de main.cpp vers `src/ui/`
       (display.h / theme.h / model.h / render.cpp). Le rendu ne lit qu'un
       `UiModel` rempli sous verrou — plus aucun accès matériel, réseau ou NVS

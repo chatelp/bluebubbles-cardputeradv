@@ -203,6 +203,12 @@ int runScreens(const std::string& dir) {
     m.calibrating = false;
     fillDemo(m);
     m.screen = SCR_SETUP;    shot("09-setup");
+    m.screen = SCR_SPLASH;
+    m.calibrating = true; m.calibPage = 12; m.calibTotal = 30; m.synced = false;
+    shot("10-splash-sync");
+    m.wifiOk = false; m.calibrating = false; m.calibPage = 0;
+    m.status = String(T(S_CONNECTING_TO)) + "HomeWiFi…";
+    shot("11-splash-connect");
     return 0;
 }
 

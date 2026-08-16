@@ -1014,12 +1014,20 @@ void setup() {
         return;
     }
 
-    showBootMessage(String(T(S_CONNECTING_TO)) + gConfig.wifiSsid + "…");
+    // Splash : la marque + les étapes WiFi > serveur > synchro. Il reste
+    // affiché jusqu'à la première liste (ou passe la main aussitôt si la
+    // NVS en fournit une).
+    sUi.screen = SCR_SPLASH;
+    sUi.status = String(T(S_CONNECTING_TO)) + gConfig.wifiSsid + "…";
     WiFi.mode(WIFI_STA);
     WiFi.setSleep(true);  // modem-sleep entre les polls : économise la batterie
     WiFi.begin(gConfig.wifiSsid.c_str(), gConfig.wifiPass.c_str());
     uint32_t t0 = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) delay(200);
+    while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) {
+        render();  // anime les points de la bulle pendant l'attente
+        delay(120);
+    }
+    sUi.status = "";
 
     if (WiFi.status() != WL_CONNECTED) {
         ConfigPortal::startAP();
@@ -1039,7 +1047,6 @@ void setup() {
         return;
     }
 
-    sUi.screen = SCR_CHATS;
     // storeLoad() renseigne sMarker : l'âge se juge après.
     bool haveList = storeLoad();
     // Au-delà de 7 jours de retard, le rattrapage incrémental serait plus
@@ -1048,11 +1055,12 @@ void setup() {
     bool tooOld = sMarker > 0 && nowSec > 1700000000 &&
                   ((int64_t)nowSec * 1000 - sMarker) > 7LL * 86400000LL;
     if (haveList && !tooOld) {
-        // Liste immédiate depuis la NVS ; le premier poll fait le rattrapage.
+        // Liste immédiate depuis la NVS : le splash n'a rien à raconter.
+        sUi.screen = SCR_CHATS;
         sUi.status = T(S_UPDATING);
         netEnqueue(NET_POLL);
     } else {
-        sUi.status = T(S_CALIBRATING);
+        // Première synchro : le splash reste et montre la progression.
         requestCalibration();
     }
     render();
@@ -1105,6 +1113,19 @@ void loop() {
         sSendBackup = "";
         sSendBackupGuid = "";
         sDirty = true;
+    }
+    if (sUi.screen == SCR_SPLASH) {
+        // Fin de la première synchro : place aux conversations. Et tant que
+        // le splash est là, on anime ses points à ~8 Hz.
+        static uint32_t lastAnim = 0;
+        DataLock l;
+        if (!sUi.calibrating && !sUi.chats.empty()) {
+            sUi.screen = SCR_CHATS;
+            sDirty = true;
+        } else if (millis() - lastAnim > 120) {
+            lastAnim = millis();
+            sDirty = true;
+        }
     }
     if (sDirty) render();
     delay(10);

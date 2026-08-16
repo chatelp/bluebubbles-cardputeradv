@@ -8,7 +8,7 @@
 
 #include "bb_client.h"  // BBChat, BBMsg (et String via Arduino ou le shim hôte)
 
-enum Screen { SCR_SETUP, SCR_CHATS, SCR_MESSAGES, SCR_COMPOSE, SCR_INFO, SCR_SETTINGS };
+enum Screen { SCR_SPLASH, SCR_SETUP, SCR_CHATS, SCR_MESSAGES, SCR_COMPOSE, SCR_INFO, SCR_SETTINGS };
 
 // Champs de l'écran Réglages — l'ordre est l'ordre d'affichage.
 enum SetField : uint8_t {
