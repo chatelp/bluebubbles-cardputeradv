@@ -105,7 +105,29 @@ firmware default and never enters this repository.
 
 ---
 
+## Install
+
+**The easy way — [M5Burner](https://docs.m5stack.com/en/download)**
+(no toolchain needed): open M5Burner, pick **CARDPUTER**, search
+*Silicon Bubbles*, hit Burn. Note this writes a factory image, which
+**erases existing device settings**.
+
+**Or flash the release binary** from
+[v0.19.0](https://github.com/chatelp/silicon-bubbles-cardputeradv/releases/latest)
+— the combined image goes at address 0:
+
+```bash
+esptool.py --chip esp32s3 write_flash 0x0 silicon-bubbles-0.19.0-factory.bin
+```
+
+Either way, the device then asks for WiFi and your BlueBubbles server —
+see *Setup, in a browser* above.
+
+---
+
 ## Build
+
+From source, this flashes the app alone and **preserves** your settings:
 
 ```bash
 pio run -e cardputer-adv -t upload
