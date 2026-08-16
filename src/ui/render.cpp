@@ -668,6 +668,10 @@ static void drawMessages(bool composeMode) {
         if (by + bodyH < areaTop) break;
 
         if (b.senderHdr) {
+            // Une étiquette dont le haut sort de la zone appartient à un
+            // message déjà défilé : la dessiner laisserait un fragment de
+            // sa dernière rangée sous la barre (vu au montage du héros).
+            if (y < areaTop) continue;
             C->setFont(&fonts::Font0);
             int tW = C->textWidth(b.sepTime);
             String lbl = fitText(b.sepText, BUB_MAXW - tW - 6);

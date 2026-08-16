@@ -161,6 +161,33 @@ envoi), endpoint /debug/conv, STORE_VER 3 (recalibration auto).
       (clavier ignoré) ; plein écran conservé pour la synchro initiale —
       validé sur l'appareil (doublon absorbé, interruption sans perte)
 
+## v0.19 — Chaîne de publication (2026-08-16)
+
+Doctrine reprise de Silicon Casino (elle-même de Daoa Mini) : **chaque
+image publiée sort du simulateur, jamais d'une maquette**. `captures/`
+n'est pas versionné, `docs/images/` et `docs/m5burner/` le sont, et deux
+scripts sont l'unique passerelle entre les deux.
+
+```bash
+pio run -e sim
+.pio/build/sim/program --screens captures/screens
+.pio/build/sim/program --frames captures/gif 60
+python3 scripts/readme_images.py      # 16 écrans + hero.png (pur Python)
+python3 scripts/make_store_images.py  # cover M5Burner, mosaïque 3x2, GIF
+```
+
+- [x] Mode `--frames` du simulateur : la boucle produit en 60 images
+      déterministes — on tape lettre à lettre, on envoie, la bulle part,
+      un cœur s'y pose, la réponse arrive (`docs/images/loop.gif`, 39 Ko)
+- [x] `readme_images.py` (pur Python, BMP → PNG par zlib, aucune
+      dépendance) : 16 écrans à l'échelle 2 + héros 2×2
+- [x] `make_store_images.py` (PIL) : affiche M5Burner 1200×900 avec son
+      test de vignette à 170×135, mosaïque 3×2 pour Reddit, GIF quantisé
+- [x] Deux défauts vus au montage du héros et corrigés : fragment
+      d'étiquette sous la barre (étiquette d'un message défilé), et émojis
+      de démonstration hors couverture qui tombaient sur le glyphe « ? »
+- [x] README bilingues illustrés : héros, GIF, galerie 3×2
+
 ## v0.18 — Alias dans le chrome, et écran À propos (2026-08-16) — flashé
 
 - [x] **Le nom local prime dans la barre de titre** et les étiquettes QUI :

@@ -30,6 +30,9 @@ venv/
 # rend le formulaire PRÉREMPLI avec le WiFi et les mots de passe réels.
 design/build/
 design/portail/apercu.html
+# Les captures BRUTES du simulateur sont jetables (regénérables en une
+# seconde) ; ce qui est publié vit dans docs/images/ et docs/m5burner/,
+# produit par scripts/readme_images.py et scripts/make_store_images.py.
 captures/
 
 # ------------------------------------------------ travail hors dépôt

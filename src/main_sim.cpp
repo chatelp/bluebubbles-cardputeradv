@@ -98,7 +98,7 @@ void fillDemo(UiModel& m) {
     m.chats.clear();
     m.chats.push_back(mkChat("621043678", "Camille", "On dit 20h au Vieux Port ? 🎉", now - 4 * MIN, false));
     m.chats.push_back(mkChat("633728194", "Papa", "Bien recu, merci fiston 👍", now - 52 * MIN, false));
-    m.chats.push_back(mkChat("677301582", "Lucie", "J'apporte le dessert 🍰", now - 3 * H, true));
+    m.chats.push_back(mkChat("677301582", "Lucie", "J'apporte le dessert ✨", now - 3 * H, true));
     m.chats.push_back(mkChat("606459217", "Antoine B.", "Le PCB v2 est parti en prod 🔥", now - 26 * H, false));
     m.chats.push_back(mkChat("688112430", "Maman", "Appelle-moi quand tu peux ❤️", now - 2 * D, false));
     m.chats[2].lastFromMe = true;
@@ -114,7 +114,7 @@ void fillDemo(UiModel& m) {
     m.msgs.push_back(mkMsg("Grosse journee, j'ai flashe le firmware 12 fois 😅", now - 22 * MIN, true));
     m.msgs.back().taps[3] = 1;  // 😂 sur le message envoyé
     m.msgs.push_back(mkMsg("Raison de plus pour venir !", now - 20 * MIN, false));
-    m.msgs.push_back(mkMsg("Ok je passe vers 19h30 🍷", now - 6 * MIN, true));
+    m.msgs.push_back(mkMsg("Ok je passe vers 19h30 👍", now - 6 * MIN, true));
     m.msgs.back().taps[0] = 2;  // ❤️ ×2
     m.msgs.push_back(mkMsg("On dit 20h au Vieux Port ? 🎉", now - 4 * MIN, false));
 
@@ -452,6 +452,59 @@ int runMocks(const std::string& dir) {
     return 0;
 }
 
+// --------------------------------------------------------------- animation
+// Le GIF raconte la boucle produit en une phrase : on tape, on envoie, la
+// bulle part, elle reçoit un coeur, la réponse arrive. Déterministe : la
+// même suite d'images à chaque exécution.
+int runFrames(const std::string& dir, int n) {
+    lgfx::LGFX_Sprite g;
+    g.setColorDepth(16);
+    if (!g.createSprite(SCREEN_W, SCREEN_H)) return 1;
+
+    UiModel m;
+    fillDemo(m);
+    // On repart du fil sans le dernier message : il sera « reçu » à la fin.
+    m.msgs.pop_back();
+    m.screen = SCR_MESSAGES;
+    m.compose = "";
+    const String typed = "J'arrive vers 19h30 ";  // l'émoji est ajouté d'un bloc
+
+    char name[64];
+    for (int f = 0; f < n; f++) {
+        // Une frame = ~80 ms. Le découpage suit le rythme d'une vraie main.
+        int t = f;
+        if (t < 3) {
+            m.screen = SCR_MESSAGES;                       // le fil, au repos
+        } else if (t < 3 + (int)typed.length()) {
+            m.screen = SCR_COMPOSE;                        // frappe, lettre à lettre
+            m.compose = typed.substring(0, t - 3 + 1);
+        } else if (t < 6 + (int)typed.length()) {
+            m.screen = SCR_COMPOSE;
+            m.compose = typed + "\xF0\x9F\x8E\x89";        // l'émoji
+        } else if (t < 12 + (int)typed.length()) {
+            m.screen = SCR_MESSAGES;                       // envoi en cours
+            m.statusView = T(S_SENDING);
+        } else {
+            m.statusView = "";
+            if ((int)m.msgs.size() == 6) {                 // la bulle envoyée arrive
+                BBMsg sent = mkMsg("", demoNow(), true);
+                sent.text = typed + "\xF0\x9F\x8E\x89";
+                m.msgs.push_back(sent);
+            }
+            int after = t - (12 + (int)typed.length());
+            if (after >= 6 && !m.msgs.back().taps[0]) m.msgs.back().taps[0] = 1;  // coeur
+            if (after >= 14 && (int)m.msgs.size() == 7)
+                m.msgs.push_back(mkMsg("On dit 20h au Vieux Port ? \xF0\x9F\x8E\x89",
+                                       demoNow(), false));
+        }
+        uiRender(g, m);
+        snprintf(name, sizeof(name), "%s/f%03d.bmp", dir.c_str(), f);
+        if (!writeBmp(g, name)) return 1;
+    }
+    std::printf("%d images dans %s\n", n, dir.c_str());
+    return 0;
+}
+
 // ------------------------------------------------------------ interactif
 struct KeyEdge {
     bool prev[SDL_NUM_SCANCODES] = {false};
@@ -578,10 +631,17 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         if (!std::strcmp(argv[i], "--screens") && i + 1 < argc) screensDir = argv[++i];
         else if (!std::strcmp(argv[i], "--mocks") && i + 1 < argc) return runMocks(argv[++i]);
+        else if (!std::strcmp(argv[i], "--frames") && i + 2 < argc) {
+            std::string d = argv[++i];
+            int n = std::atoi(argv[++i]);
+            return runFrames(d, n);
+        }
         else if (!std::strcmp(argv[i], "--lang") && i + 1 < argc)
             gLang = gConfig.lang = std::strcmp(argv[i + 1], "fr") ? LANG_EN : LANG_FR, ++i;
         else {
-            std::fprintf(stderr, "usage: %s [--screens <dir>] [--lang fr|en]\n", argv[0]);
+            std::fprintf(stderr,
+                         "usage: %s [--screens <dir>] [--frames <dir> <n>] "
+                         "[--mocks <dir>] [--lang fr|en]\n", argv[0]);
             return 2;
         }
     }

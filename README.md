@@ -5,11 +5,19 @@
 **A pocket iMessage client** — sibling of [Silicon Casino](https://github.com/chatelp/geek-casino-cardputeradv).
 M5Stack Cardputer ADV · ESP32-S3 · 240 × 135 screen · 56-key keyboard.
 
+![Silicon Bubbles — list, conversation, compose, settings](docs/images/hero.png)
+
 A lightweight client for [BlueBubbles](https://bluebubbles.app), the open
 source (Apache-2.0) iMessage bridge that runs on a Mac. The Cardputer polls
 the server's REST API over HTTPS, shows your conversations as real chat
 bubbles, and sends messages from its physical keyboard. No app, no account,
 no cloud in between — your Mac and your device.
+
+![Type, send, get a tapback, get a reply](docs/images/loop.gif)
+
+> Every image here comes straight from the simulator — never a mockup.
+> `pio run -e sim && .pio/build/sim/program --screens captures/screens`
+> then `python3 scripts/readme_images.py`.
 
 ---
 
@@ -119,6 +127,17 @@ The traps that cost the most are written down in
 longest to find: on TLS, `NetworkClient::readBytes` treats a momentary
 empty socket as a fatal error, silently truncating every response bigger
 than the decrypted buffer.
+
+---
+
+## Screens
+
+| | | |
+|:--:|:--:|:--:|
+| ![](docs/images/01-chats.png) | ![](docs/images/02-messages.png) | ![](docs/images/04-compose.png) |
+| conversations | bubbles, emoji, tapbacks | compose |
+| ![](docs/images/12-wifi-scan.png) | ![](docs/images/14-qr-join.png) | ![](docs/images/16-about.png) |
+| WiFi scan, on the device | QR: the phone joins the setup AP | about |
 
 ---
 
