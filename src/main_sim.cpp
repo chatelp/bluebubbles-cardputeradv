@@ -335,6 +335,77 @@ void terminal(lgfx::LGFX_Sprite& g) {
     g.setTextColor(DIM, BG); g.setCursor(4, 126); g.print("[240x135] [wifi:ok] [batt:84%]");
 }
 
+
+// D — Hybride : le chrome d'appareil de B, la matière de bulles de A.
+// Règle de couleur : l'appareil parle AMBRE (LED, compteurs, accusés),
+// les gens parlent BLEU (bulles). Jamais les deux sur le même élément.
+void hybride(lgfx::LGFX_Sprite& g) {
+    const uint16_t PANEL = 0x1926, EDGE_L = 0x3A8C, EDGE_D = 0x0862;
+    const uint16_t ACC = 0xFD84;  // ambre machine
+    g.fillSprite(C_INK900);
+
+    // Barre biseautée : LED, titre en capitales, signal + batterie dessinés.
+    g.fillRect(0, 0, 240, 17, PANEL);
+    g.drawFastHLine(0, 0, 240, EDGE_L);
+    g.drawFastHLine(0, 16, 240, EDGE_D);
+    g.fillCircle(9, 8, 3, ACC);
+    g.drawCircle(9, 8, 4, EDGE_D);
+    g.setTextColor(C_WHITE, PANEL); g.setCursor(20, 2); g.print("CAMILLE");
+    for (int b = 0; b < 4; b++) g.fillRect(178 + b * 4, 12 - b * 2 - 3, 2, 3 + b * 2, b < 4 ? C_SLATE300 : EDGE_D);
+    g.drawRect(200, 4, 20, 9, C_SLATE300); g.fillRect(220, 6, 2, 5, C_SLATE300);
+    g.fillRect(202, 6, 13, 5, C_SLATE300);
+
+    // Bulles de A : ombre portée, lueur haute, coins ronds — sous des
+    // étiquettes de B : QUI et QUAND en petites capitales grises.
+    auto bubble = [&](int x, int y, int w, int h, bool sent) {
+        g.fillRoundRect(x + 1, y + 2, w, h, 7, 0x0041);
+        uint16_t fill = sent ? C_BLUE500 : C_INK700;
+        g.fillRoundRect(x, y, w, h, 7, fill);
+        g.drawFastHLine(x + 6, y + 1, w - 12, sent ? 0x449F : 0x2189);
+        if (sent) g.fillTriangle(x + w - 5, y + h - 1, x + w + 2, y + h - 1, x + w - 1, y + h - 6, fill);
+        else g.fillTriangle(x + 5, y + h - 1, x - 2, y + h - 1, x + 1, y + h - 6, fill);
+    };
+    g.setFont(&fonts::Font0);
+    g.setTextColor(C_SLATE300, C_INK900); g.setCursor(7, 22); g.print("CAMILLE 18:20");
+    g.setFont(&fonts::efontJA_12);
+    bubble(6, 31, 152, 19, false);
+    g.setTextColor(C_WHITE, C_INK700); g.setCursor(11, 34); g.print("Raison de plus pour venir !");
+
+    g.setFont(&fonts::Font0);
+    g.setTextColor(C_SLATE300, C_INK900); g.setCursor(180, 57); g.print("MOI 18:36");
+    g.setFont(&fonts::efontJA_12);
+    bubble(78, 66, 156, 19, true);
+    g.setTextColor(C_WHITE, C_BLUE500); g.setCursor(83, 69); g.print("Ok je passe vers 19h30 ");
+    emoji(g, 83 + 138, 69, 0x1F377);
+    // pilule de réactions (matière A)
+    g.fillRoundRect(69, 59, 34, 15, 7, 0x0041);
+    g.fillRoundRect(68, 58, 34, 15, 7, C_INK800);
+    g.drawRoundRect(68, 58, 34, 15, 7, C_INK600);
+    emoji(g, 72, 60, 0x2764);
+    g.setTextColor(C_SLATE300, C_INK800); g.setCursor(86, 60); g.print("x2");
+    // accusé : la machine parle ambre, en petites capitales
+    g.setFont(&fonts::Font0);
+    g.setTextColor(ACC, C_INK900); g.setCursor(180, 88); g.print("DISTRIBUE");
+    g.setFont(&fonts::efontJA_12);
+
+    g.setFont(&fonts::Font0);
+    g.setTextColor(C_SLATE300, C_INK900); g.setCursor(7, 96); g.print("CAMILLE 18:38");
+    g.setFont(&fonts::efontJA_12);
+    bubble(6, 105, 174, 19, false);
+    g.setTextColor(C_WHITE, C_INK700); g.setCursor(11, 108); g.print("On dit 20h au Vieux Port ? ");
+    emoji(g, 11 + 156, 108, 0x1F389);
+
+    // Pied de page machine : compteurs en Font0, ambre sur panneau biseauté.
+    g.fillRect(0, 127, 240, 8, PANEL);
+    g.drawFastHLine(0, 127, 240, EDGE_L);
+    g.setFont(&fonts::Font0);
+    g.setTextColor(C_SLATE300, PANEL); g.setCursor(4, 128);
+    g.print("MSG 07/30");
+    g.setTextColor(ACC, PANEL); g.setCursor(96, 128); g.print("NOUVEAU: 2");
+    g.setTextColor(C_SLATE300, PANEL); g.setCursor(206, 128); g.print("18:42");
+    g.setFont(&fonts::efontJA_12);
+}
+
 }  // namespace mock
 
 int runMocks(const std::string& dir) {
@@ -349,6 +420,7 @@ int runMocks(const std::string& dir) {
     mock::matiere(g);  save("A-matiere");
     mock::retro(g);    save("B-retro");
     mock::terminal(g); save("C-terminal");
+    mock::hybride(g);  save("D-hybride");
     return 0;
 }
 
